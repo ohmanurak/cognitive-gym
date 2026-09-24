@@ -67,7 +67,7 @@ export function Stats() {
                 <td>{r.label}</td>
                 <td className="num">{n1(r.st.PI)}</td>
                 <td className="num">{n1(r.st.AI)}</td>
-                <td className="num">{n1(r.st.WMI)}</td>
+                <td className="num">{n1(r.st.WMI)}{r.st.WMIProvisional ? '*' : ''}</td>
                 <td className="num">{n1(r.st.HI)}</td>
                 <td className="num">{r.st.EI == null ? '·' : r.st.EI.toFixed(2)}</td>
                 <td className="num">{n1(r.st.accuracy)}</td>

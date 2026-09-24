@@ -1,7 +1,8 @@
 import type { Item, Skill } from '../parser/parseWorkbook'
 import { dimsTotal, hasRubric } from './rubric'
-import { calibration, efficiency, patternIndex, rubricIndex, workingMemoryIndex } from './indices'
+import { calibration, efficiency, patternIndex, rubricIndex } from './indices'
 import { errorAnalysis, firstOpenMissBlock, stepUnits } from './erroranalysis'
+import { wmiFor } from './wmi'
 import { baselineSpanDone } from './spantest'
 import { blocks, itemById, type BlockDef } from './structure'
 import { blockState, type Attempt, type ErrorCode, type SpanTry, type State } from './store'
@@ -158,6 +159,8 @@ export interface ScopeStats {
   PI: number | null
   AI: number | null
   WMI: number | null
+  /** Only one Item class present; weights renormalised. */
+  WMIProvisional?: boolean
   HI: number | null
   EI: number | null
   dominantError: ErrorCode | null
@@ -168,7 +171,6 @@ export function scopeStats(s: State, scope: Scope): ScopeStats {
   const skills = skillRows(scored)
   const possible = skills.reduce((a, r) => a + r.possible, 0)
   const score = skills.reduce((a, r) => a + r.score, 0)
-  const pct = (r: Scored) => (r.attempt.score ?? 0) / r.item.points
 
   const pd = skills.find((r) => r.skill === 'PD')!
   let PI: number | null = null
@@ -192,15 +194,7 @@ export function scopeStats(s: State, scope: Scope): ScopeStats {
     ? efficiency(pe.filter((r) => r.attempt.score === r.item.points).length, t.actual)
     : null
 
-  const wm = scored.filter((r) => r.item.skill === 'WM')
-  const span = longestReliableSpan(s.spans, 'backward')
-  let WMI: number | null = null
-  if (wm.length && span > 0) {
-    const multi = wm.filter((r) => r.item.star)
-    const manip = wm.filter((r) => !r.item.star)
-    const acc = (rows: Scored[]) => (rows.length ? rows.reduce((a, r) => a + pct(r), 0) / rows.length : 0)
-    WMI = workingMemoryIndex(span, acc(manip), acc(multi))
-  }
+  const wmi = wmiFor(s, scope)
 
   const counts = new Map<ErrorCode, number>()
   for (const r of scored) {
@@ -215,7 +209,8 @@ export function scopeStats(s: State, scope: Scope): ScopeStats {
     PI,
     AI: rubric('AB'),
     HI: rubric('HT'),
-    WMI,
+    WMI: wmi?.WMI ?? null,
+    WMIProvisional: wmi?.provisional,
     EI,
     dominantError,
   }

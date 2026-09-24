@@ -31,6 +31,8 @@ export interface Item {
   skill: Skill
   points: number
   star: boolean
+  /** Workbook's explicit `*(multi-step)*` tag in the header (WM Items). Not the star. */
+  multiStepTag: boolean
   trapItem: boolean
   /** Markdown body as authored. */
   body: string
@@ -124,6 +126,7 @@ export function parseItems(lines: string[], end: number): Item[] {
       skill: skill as Skill,
       points: Number(pts),
       star: rest.includes('★'),
+      multiStepTag: rest.includes('(multi-step)'),
       trapItem: rest.includes('🪤'),
       body: body.join('\n').trim(),
       timing: null,
