@@ -18,6 +18,14 @@ export function workingMemoryIndex(span: number, manipulation: number, multiStep
   return 100 * (0.2 * Math.min(1, span / 8) + 0.4 * manipulation + 0.4 * multiStep)
 }
 
+/** Provisional thresholds: Items needed before an Index is considered reliable. */
+export const PROVISIONAL_MIN = { AI: 3, HI: 3, PI: 8, EI: 5 } as const
+
+/** True when an Index has fewer contributing Items than its threshold. */
+export function isProvisional(index: keyof typeof PROVISIONAL_MIN, n: number): boolean {
+  return n < PROVISIONAL_MIN[index]
+}
+
 /** Efficiency = correct answers per minute. */
 export function efficiency(correct: number, minutes: number): number | null {
   return minutes > 0 ? correct / minutes : null

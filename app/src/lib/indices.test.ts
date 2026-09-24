@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calibration, efficiency, efficiencyCounts, patternIndex, rubricIndex, workingMemoryIndex } from './indices'
+import { calibration, efficiency, efficiencyCounts, isProvisional, patternIndex, rubricIndex, workingMemoryIndex } from './indices'
 
 describe('indices (Workbook §0.8)', () => {
   it('PI rewards speed only when accuracy ≥ 75%', () => {
@@ -39,5 +39,14 @@ describe('indices (Workbook §0.8)', () => {
     expect(c[4]).toEqual({ confidence: 5, n: 2, accuracy: 0.5 })
     expect(c[1].accuracy).toBe(1)
     expect(c[0].accuracy).toBeNull()
+  })
+
+  it('provisional under 3 AI/HI, 8 PI, 5 efficiency Items', () => {
+    expect(isProvisional('AI', 2)).toBe(true)
+    expect(isProvisional('HI', 3)).toBe(false)
+    expect(isProvisional('PI', 7)).toBe(true)
+    expect(isProvisional('PI', 8)).toBe(false)
+    expect(isProvisional('EI', 4)).toBe(true)
+    expect(isProvisional('EI', 5)).toBe(false)
   })
 })

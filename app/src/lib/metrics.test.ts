@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { blockStatus, longestReliableSpan, nextUp, progressOf, scopeStats } from './metrics'
-import type { State } from './store'
-import { blockByKey, blocks } from './structure'
+import { newBlockState, type State } from './store'
+import { blockByKey, blocks, itemById } from './structure'
 
 const empty = (): State => ({ attempts: {}, drafts: {}, blocks: {}, spans: [], spanTests: [], reflections: {} })
 
@@ -65,6 +65,37 @@ describe('stats', () => {
     const st = scopeStats(s, { kind: 'week', week: 1 })
     expect(st.HI).toBe(80)
     expect(st.AI).toBeNull()
+  })
+
+  it('efficiency = correct Processing Items over their summed per-Item time', () => {
+    const s = empty()
+    const key = 'w10d2:A'
+    const blk = newBlockState()
+    s.blocks[key] = { ...blk, round: 1, committed: true, roundElapsed: [600000], roundItemMs: [{ 'W10D2-A1': 30000, 'W10D2-A2': 30000 }] }
+    const at = (id: string) => [{ round: 1, answer: 'x', confidence: 3, score: itemById.get(id)!.points }]
+    s.attempts['W10D2-A1'] = at('W10D2-A1')
+    s.attempts['W10D2-A2'] = at('W10D2-A2')
+    const st = scopeStats(s, { kind: 'week', week: 10 })
+    expect(st.EI).toBeCloseTo(2) // 2 correct / 1 min, not the 10 min Block time
+    expect(st.n.EI).toBe(2)
+  })
+
+  it('PI ignores Blocks without a stated limit', () => {
+    const s = empty()
+    const full = (id: string) => [{ round: 1, answer: 'x', confidence: 3, score: itemById.get(id)!.points }]
+    s.attempts['W5D2-A1'] = full('W5D2-A1') // limitMin null
+    s.blocks['w5d2:A'] = { ...newBlockState(), round: 1, committed: true, roundElapsed: [9_999_999] }
+    const st = scopeStats(s, { kind: 'week', week: 5 })
+    expect(st.PI).toBeCloseTo(70) // no timed Blocks: speed not approximated, only the 0.70 base
+  })
+
+  it('flags Indices provisional under their Item thresholds but keeps values', () => {
+    const s = empty()
+    s.attempts['W1D2-D1'] = [{ round: 1, answer: 'x', confidence: 3, score: 2, dims: [2, 2, 2, 1, 1] }]
+    const st = scopeStats(s, { kind: 'week', week: 1 })
+    expect(st.HI).toBe(80)
+    expect(st.n.HI).toBe(1)
+    expect(st.provisional).toEqual({ PI: true, AI: true, HI: true, EI: true })
   })
 
   it('needs two correct tries at a length for a reliable span', () => {
