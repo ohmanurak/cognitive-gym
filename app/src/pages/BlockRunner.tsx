@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Md } from '../components/Md'
-import { suggest } from '../lib/grade'
+import { hintText, storedSuggestion, suggestionFor } from '../lib/grade'
 import { blockStatus, latestAttempt } from '../lib/metrics'
 import { actions, blockState, elapsedNow, ERROR_CODES, useStore, type State } from '../lib/store'
 import { blockByKey, blocks, freezeMin, itemById, type BlockDef } from '../lib/structure'
@@ -164,7 +164,7 @@ function ItemCard({ item, def, s }: { item: Item; def: BlockDef; s: State }) {
 
 function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType<typeof latestAttempt>> }) {
   const key = item.key!
-  const hint = suggest(attempt.answer, key.expected, key.open)
+  const hint = suggestionFor(item, attempt.answer)
   const options = Array.from({ length: item.points + 1 }, (_, i) => i)
   const wrong = attempt.score != null && attempt.score < item.points
 
@@ -188,9 +188,7 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
       <div className="row" style={{ marginTop: 10 }}>
         <span className="small muted">
           Score
-          {hint === 'full' && ' (looks correct)'}
-          {hint === 'unsure' && ' (check parts)'}
-          {hint === 'none' && (key.open ? ' (rubric, self-score)' : '')}
+          {hintText(hint, key.open)}
         </span>
         {options.map((n) => (
           <button
@@ -291,7 +289,7 @@ export function BlockRunner({ blockKey }: { blockKey: string }) {
 
       <div className="row" style={{ marginTop: 16 }}>
         {!b.committed ? (
-          <button className="primary" disabled={!ready} onClick={() => actions.commitBlock(def.key, def.itemIds)}>
+          <button className="primary" disabled={!ready} onClick={() => actions.commitBlock(def.key, def.itemIds, (id, a) => storedSuggestion(itemById.get(id)!, a))}>
             Commit block and reveal Key
           </button>
         ) : (

@@ -48,7 +48,8 @@ export const actions = {
   startClock: (key: string) => commit(core.startClock(state, key, Date.now())),
   pauseClock: (key: string) => commit(core.pauseClock(state, key, Date.now())),
   snapshotOvertime: (key: string, itemIds: string[]) => commit(core.snapshotOvertime(state, key, itemIds)),
-  commitBlock: (key: string, itemIds: string[]) => commit(core.commitBlock(state, key, itemIds, Date.now())),
+  commitBlock: (key: string, itemIds: string[], suggestFor?: (id: string, answer: string) => Attempt['suggestion']) =>
+    commit(core.commitBlock(state, key, itemIds, Date.now(), suggestFor)),
   mark: (itemId: string, patch: Partial<Attempt>) => commit(core.mark(state, itemId, patch)),
   retryBlock: (key: string) => commit(core.retryBlock(state, key)),
   addSpan: (t: SpanTry) => commit(core.addSpan(state, t)),

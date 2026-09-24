@@ -24,6 +24,8 @@ export interface Attempt {
   /** Answer as it stood when a strict clock ran out (the `T` mark). */
   atTimeout?: string
   score: number | null
+  /** Suggestion at Commit time, kept silently for tuning. Never shown, never scores. */
+  suggestion?: { found: number; total: number; hintScore: number | null }
   errorCode?: ErrorCode
   nature?: 'Con' | 'Car'
   assumption?: string
@@ -115,7 +117,13 @@ export function snapshotOvertime(s: State, key: string, itemIds: string[]): Stat
 }
 
 /** Lock answers and confidence for every Item in the Block, record when, and unlock the Key. */
-export function commitBlock(s: State, key: string, itemIds: string[], now: number): State {
+export function commitBlock(
+  s: State,
+  key: string,
+  itemIds: string[],
+  now: number,
+  suggestFor?: (id: string, answer: string) => Attempt['suggestion'],
+): State {
   const b = blockState(s, key)
   if (b.committed) return s
   const attempts = { ...s.attempts }
@@ -130,6 +138,7 @@ export function commitBlock(s: State, key: string, itemIds: string[], now: numbe
         confidence: d?.confidence ?? 0,
         atTimeout: b.snapshot ? b.snapshot[id] : undefined,
         score: null,
+        suggestion: suggestFor?.(id, d?.answer ?? ''),
       },
     ]
     delete drafts[id]
