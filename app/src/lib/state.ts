@@ -32,6 +32,8 @@ export interface Attempt {
   untimedScore?: number | null
   /** Rubric dimensions (open AB/HT Items): five 0-2 scores, null = unset. */
   dims?: (number | null)[]
+  /** Suggestion at Commit time, kept silently for tuning. Never shown, never scores. */
+  suggestion?: { found: number; total: number; hintScore: number | null }
   errorCode?: ErrorCode
   nature?: 'Con' | 'Car'
   assumption?: string
@@ -150,7 +152,13 @@ export function snapshotOvertime(s: State, key: string, itemIds: string[]): Stat
 }
 
 /** Lock answers and confidence for every Item in the Block, record when, and unlock the Key. */
-export function commitBlock(s: State, key: string, itemIds: string[], now: number): State {
+export function commitBlock(
+  s: State,
+  key: string,
+  itemIds: string[],
+  now: number,
+  suggestFor?: (id: string, answer: string) => Attempt['suggestion'],
+): State {
   const b = blockState(s, key)
   if (b.committed) return s
   const attempts = { ...s.attempts }
@@ -166,6 +174,7 @@ export function commitBlock(s: State, key: string, itemIds: string[], now: numbe
         atTimeout: b.snapshot ? b.snapshot[id] : undefined,
         skipped: d?.skipped || undefined,
         score: skipScore(d),
+        suggestion: suggestFor?.(id, d?.answer ?? ''),
       },
     ]
     delete drafts[id]

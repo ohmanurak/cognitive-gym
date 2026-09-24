@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Md } from '../components/Md'
 import { RubricDims } from '../components/RubricDims'
 import { hasRubric } from '../lib/rubric'
-import { suggest } from '../lib/grade'
+import { hintText, storedSuggestion, suggestionFor } from '../lib/grade'
 import { itemMsNow, overTarget, shouldNudge } from '../lib/itemtime'
 import { blockStatus, latestAttempt } from '../lib/metrics'
 import { actions, blockState, elapsedNow, ERROR_CODES, useStore, type State } from '../lib/store'
@@ -190,7 +190,7 @@ function ItemCard({ item, def, s }: { item: Item; def: BlockDef; s: State }) {
 
 function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType<typeof latestAttempt>> }) {
   const key = item.key!
-  const hint = suggest(attempt.answer, key.expected, key.open)
+  const hint = suggestionFor(item, attempt.answer)
   const options = Array.from({ length: item.points + 1 }, (_, i) => i)
   const second = needsUntimedScore(attempt)
   const wrong = attempt.score != null && attempt.score < item.points
@@ -217,9 +217,7 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
       <div className="row" style={{ marginTop: 10 }}>
         <span className="small muted">
           {second ? 'Timed score (T)' : 'Score'}
-          {hint === 'full' && ' (looks correct)'}
-          {hint === 'unsure' && ' (check parts)'}
-          {hint === 'none' && (key.open ? ' (rubric, self-score)' : '')}
+          {hintText(hint, key.open)}
         </span>
         {options.map((n) => (
           <button
@@ -336,7 +334,7 @@ export function BlockRunner({ blockKey }: { blockKey: string }) {
 
       <div className="row" style={{ marginTop: 16 }}>
         {!b.committed ? (
-          <button className="primary" disabled={!ready} onClick={() => actions.commitBlock(def.key, def.itemIds)}>
+          <button className="primary" disabled={!ready} onClick={() => actions.commitBlock(def.key, def.itemIds, (id, a) => storedSuggestion(itemById.get(id)!, a))}>
             Commit block and reveal Key
           </button>
         ) : (
