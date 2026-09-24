@@ -56,6 +56,17 @@ describe('stats', () => {
     expect(st.dominantError).toBe('P')
   })
 
+  it('AI and HI use dimension totals of open Items only', () => {
+    const s = empty()
+    const at = (score: number, dims?: number[]) => [{ round: 1, answer: 'x', confidence: 3, score, dims }]
+    s.attempts['W1D2-D1'] = at(2, [2, 2, 2, 1, 1]) // open HT, total 8
+    s.attempts['W1D4-C1'] = at(4) // open HT, no dims: ignored
+    s.attempts['W1D3-B2'] = at(3, [0, 0, 0, 0, 0]) // objective AB: ignored
+    const st = scopeStats(s, { kind: 'week', week: 1 })
+    expect(st.HI).toBe(80)
+    expect(st.AI).toBeNull()
+  })
+
   it('needs two correct tries at a length for a reliable span', () => {
     const t = (length: number, correct: boolean) => ({ at: 0, direction: 'backward' as const, length, correct })
     expect(longestReliableSpan([t(4, true), t(4, true), t(5, true), t(5, false)], 'backward')).toBe(4)

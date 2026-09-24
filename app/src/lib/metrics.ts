@@ -1,4 +1,5 @@
 import type { Item, Skill } from '../parser/parseWorkbook'
+import { dimsTotal, hasRubric } from './rubric'
 import { calibration, efficiency, patternIndex, rubricIndex, workingMemoryIndex } from './indices'
 import { blocks, itemById, type BlockDef } from './structure'
 import { blockState, type Attempt, type ErrorCode, type SpanTry, type State } from './store'
@@ -150,8 +151,12 @@ export function scopeStats(s: State, scope: Scope): ScopeStats {
   }
 
   const rubric = (skill: Skill) => {
-    const rows = scored.filter((r) => r.item.skill === skill)
-    return rubricIndex(rows.map((r) => pct(r) * 10))
+    // Open Items with complete dimensions only; objective and undimensioned Items are ignored.
+    const totals = scored
+      .filter((r) => r.item.skill === skill && hasRubric(r.item))
+      .map((r) => dimsTotal(r.attempt.dims))
+      .filter((n): n is number => n != null)
+    return rubricIndex(totals)
   }
 
   const pe = scored.filter((r) => r.item.skill === 'PE')

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Md } from '../components/Md'
+import { RubricDims } from '../components/RubricDims'
+import { hasRubric } from '../lib/rubric'
 import { suggest } from '../lib/grade'
 import { blockStatus, latestAttempt } from '../lib/metrics'
 import { actions, blockState, elapsedNow, ERROR_CODES, useStore, type State } from '../lib/store'
@@ -184,6 +186,8 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
         {key.trap && key.trap !== '—' && <Md>{`*Trap:* ${key.trap}`}</Md>}
         {key.model && <Md>{key.model}</Md>}
       </div>
+
+      {hasRubric(item) && <RubricDims item={item} attempt={attempt} />}
 
       <div className="row" style={{ marginTop: 10 }}>
         <span className="small muted">
