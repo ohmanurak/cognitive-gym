@@ -194,7 +194,7 @@ export function calibrationOf(s: State) {
   for (const def of blocks) {
     for (const id of def.itemIds) {
       const a = firstAttempt(s, id)
-      if (a && a.score != null && a.confidence > 0) {
+      if (a && a.score != null && !a.skipped && a.confidence > 0) {
         all.push({ confidence: a.confidence, correct: a.score === itemById.get(id)!.points })
       }
     }

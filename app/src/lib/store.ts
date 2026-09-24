@@ -45,6 +45,7 @@ export function useStore(): State {
 
 export const actions = {
   setDraft: (itemId: string, patch: Partial<Draft>) => commit(core.setDraft(state, itemId, patch)),
+  toggleSkip: (itemId: string) => commit(core.toggleSkip(state, itemId)),
   startClock: (key: string) => commit(core.startClock(state, key, Date.now())),
   pauseClock: (key: string) => commit(core.pauseClock(state, key, Date.now())),
   snapshotOvertime: (key: string, itemIds: string[]) => commit(core.snapshotOvertime(state, key, itemIds)),
