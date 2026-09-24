@@ -11,7 +11,7 @@ describe('structure', () => {
     expect(blocks.at(-1)!.key).toBe('final:exam')
     expect(blockByKey.get('w1d1:A')!.itemIds).toEqual(['W1D1-A1'])
     expect(blockByKey.get('base:5')!.strict).toBe(true)
-    expect(blockByKey.get('w9d1:A')!.strict).toBe(true)
+    expect(blockByKey.get('w9d1:A')!.strict).toBe(false)
     expect(blockByKey.get('w1d1:A')!.strict).toBe(false)
   })
 

@@ -3,7 +3,7 @@ import { Md } from '../components/Md'
 import { suggest } from '../lib/grade'
 import { blockStatus, latestAttempt } from '../lib/metrics'
 import { actions, blockState, elapsedNow, ERROR_CODES, useStore, type State } from '../lib/store'
-import { blockByKey, itemById, blocks, type BlockDef } from '../lib/structure'
+import { blockByKey, blocks, freezeMin, itemById, type BlockDef } from '../lib/structure'
 import type { Item } from '../parser/parseWorkbook'
 
 const SKIPPED = '↷ skipped'
@@ -25,17 +25,23 @@ function Timer({ def, s }: { def: BlockDef; s: State }) {
   const elapsed = elapsedNow(b, now)
   const limitMs = (def.limitMin ?? 0) * 60000
   const over = limitMs > 0 && elapsed > limitMs
+  const freezeAt = freezeMin(def)
+  const frozen = freezeAt !== null && elapsed > freezeAt * 60000
+  const hardDiffers = def.hardLimitMin !== null && def.hardLimitMin !== def.limitMin
+  const nextMarker = def.paceMarkers.find((m) => m.atMin * 60000 > elapsed)
 
   useEffect(() => {
-    if (over && def.strict && !b.snapshot && !b.committed) actions.snapshotOvertime(def.key, def.itemIds)
-  }, [over, def, b.snapshot, b.committed])
+    if (frozen && !b.snapshot && !b.committed) actions.snapshotOvertime(def.key, def.itemIds)
+  }, [frozen, def, b.snapshot, b.committed])
 
   return (
     <div className="card">
       <div className="row">
         <span className={`timer${over ? ' over' : ''}`}>{fmt(elapsed)}</span>
         <span className="muted">
-          / {def.limitMin} min {def.strict ? '(strict)' : '(soft)'}
+          {def.limitMin === null
+            ? 'no stated limit'
+            : `/ ${def.limitMin} min ${def.strict ? (hardDiffers ? `(target; hard limit ${def.hardLimitMin})` : '(strict)') : '(soft)'}`}
         </span>
         <span className="grow" />
         {!b.committed &&
@@ -47,7 +53,17 @@ function Timer({ def, s }: { def: BlockDef; s: State }) {
             </button>
           ))}
       </div>
-      {over && def.strict && !b.committed && (
+      {def.paceMarkers.length > 0 && !b.committed && nextMarker && (
+        <div className="small muted" style={{ marginTop: 6 }}>
+          Pace (not binding): {nextMarker.label} at {nextMarker.atMin}:00
+        </div>
+      )}
+      {over && hardDiffers && !frozen && !b.committed && (
+        <div className="notice">
+          Target of {def.limitMin} min reached. The hard limit is {def.hardLimitMin} min; answers freeze then.
+        </div>
+      )}
+      {frozen && !b.committed && (
         <div className="notice">
           Time is up. Answers as they stand are frozen as <b>T</b>. Keep working without the clock; both versions are recorded.
         </div>
@@ -105,6 +121,11 @@ function ItemCard({ item, def, s }: { item: Item; def: BlockDef; s: State }) {
           {item.star ? ' ★' : ''}
         </span>
         {item.trapItem && <span className="pill">🪤 trap</span>}
+        {item.timing && (
+          <span className="pill">
+            ⏱ {item.timing.kind === 'target' ? 'target' : item.timing.strict ? 'strict drill' : 'limit'} {item.timing.minutes} min
+          </span>
+        )}
       </div>
       <div style={{ marginTop: 8 }}>{isCover ? <CoverReveal>{body}</CoverReveal> : body}</div>
 

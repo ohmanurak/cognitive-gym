@@ -57,3 +57,27 @@ describe('audit regressions', () => {
     expect(wb.items.filter((i) => i.stage === 'final')).toHaveLength(32)
   })
 })
+
+describe('Item list snapshot', () => {
+  it('matches the committed id, points, skill and timing list (update with vitest -u after a deliberate workbook edit)', async () => {
+    const lines = wb.items.map((i) => {
+      const t = i.timing ? ` ${i.timing.kind}:${i.timing.minutes}${i.timing.strict ? ':strict' : ''}` : ''
+      return `${i.id} ${i.skill} ${i.points}${t}`
+    })
+    await expect(lines.join('\n') + '\n').toMatchFileSnapshot('./__snapshots__/items.txt')
+  })
+})
+
+describe('Item timing labels', () => {
+  it('parses limits, targets and strict drills from an Item lead-in', async () => {
+    const { parseTiming } = await import('./parseWorkbook')
+    expect(parseTiming('**Primary (15 min).** Do it')).toEqual({ minutes: 15, strict: false, kind: 'limit' })
+    expect(parseTiming('**Secondary (5 min, strict).** x')).toEqual({ minutes: 5, strict: true, kind: 'limit' })
+    expect(parseTiming('**Secondary (10–12 min soft limit).** x')).toEqual({ minutes: 12, strict: false, kind: 'limit' })
+    expect(parseTiming('**Warm-up (target 4 min; mental only).** x')).toEqual({ minutes: 4, strict: false, kind: 'target' })
+    expect(parseTiming('**Timed: 6 min strict.** (a) 35% of 240')).toEqual({ minutes: 6, strict: true, kind: 'limit' })
+    expect(parseTiming('**Timed 5 min.** (a)')).toEqual({ minutes: 5, strict: false, kind: 'limit' })
+    expect(parseTiming('5 machines take 5 minutes to make 5 widgets')).toBeNull()
+    expect(parseTiming('(a) Level after 1 minute')).toBeNull()
+  })
+})

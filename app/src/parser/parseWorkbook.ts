@@ -13,6 +13,14 @@ export interface ItemKey {
   model: string
 }
 
+/** A time label the workbook attaches to an Item's own text. */
+export interface ItemTiming {
+  minutes: number
+  strict: boolean
+  /** target = per-Item goal; limit = a stated time limit for the Item or, on a Block's first Item, the Block. */
+  kind: 'target' | 'limit'
+}
+
 export interface Item {
   id: string
   stage: Stage
@@ -26,6 +34,7 @@ export interface Item {
   trapItem: boolean
   /** Markdown body as authored. */
   body: string
+  timing: ItemTiming | null
   key: ItemKey | null
 }
 
@@ -39,6 +48,8 @@ export interface DayMeta {
   week: number
   day: number
   title: string
+  /** First minutes figure in the Day heading parenthetical, e.g. 60 for (60 min), 75 for (≈ 75 min). */
+  limitMin: number | null
 }
 
 export interface Workbook {
@@ -66,6 +77,23 @@ function blockOf(id: string): string {
   if (b) return b[1]
   const f = /^F-([A-Z])/.exec(id)
   return f ? f[1] : ''
+}
+
+const TIMED = /\bTimed:?\s+(\d+)\s*min\b(\s+strict)?/i
+const PAREN = /\(\s*(target\s+)?(\d+)(?:\s*[–-]\s*(\d+))?\s*min\b([^)]*)\)/i
+
+/** Read a time label from the opening line of an Item's text (labels sit in its bold lead-in). */
+export function parseTiming(body: string): ItemTiming | null {
+  const head = body.split('\n')[0].slice(0, 200)
+  const t = TIMED.exec(head)
+  if (t) return { minutes: Number(t[1]), strict: !!t[2], kind: 'limit' }
+  const p = PAREN.exec(head)
+  if (!p) return null
+  return {
+    minutes: Number(p[3] ?? p[2]),
+    strict: /strict/i.test(p[4]),
+    kind: p[1] ? 'target' : 'limit',
+  }
 }
 
 export function parseItems(lines: string[], end: number): Item[] {
@@ -98,6 +126,7 @@ export function parseItems(lines: string[], end: number): Item[] {
       star: rest.includes('★'),
       trapItem: rest.includes('🪤'),
       body: body.join('\n').trim(),
+      timing: null,
       key: null,
     })
   }
@@ -191,8 +220,11 @@ export function parseOutline(lines: string[], end: number): { weeks: WeekMeta[];
       weeks.push({ week, title: m[2].trim(), phase: phase ? phase[1] : '' })
       continue
     }
-    m = /^## Day (\d+) — (.+?)(?:\s*\(.*)?$/.exec(lines[i])
-    if (m && week) days.push({ week, day: Number(m[1]), title: m[2].trim() })
+    m = /^## Day (\d+) — (.+?)(?:\s*\((.*)\))?$/.exec(lines[i])
+    if (m && week) {
+      const mins = m[3] ? /(\d+)\s*min/.exec(m[3]) : null
+      days.push({ week, day: Number(m[1]), title: m[2].trim(), limitMin: mins ? Number(mins[1]) : null })
+    }
   }
   return { weeks, days }
 }
@@ -202,6 +234,9 @@ export function parseWorkbook(md: string): Workbook {
   const keyStart = lines.findIndex((l) => l.startsWith('# PART 4'))
   const items = parseItems(lines, keyStart)
   const keys = parseKey(lines, keyStart)
-  for (const it of items) it.key = keys.get(it.id) ?? null
+  for (const it of items) {
+    it.key = keys.get(it.id) ?? null
+    it.timing = parseTiming(it.body)
+  }
   return { items, ...parseOutline(lines, keyStart) }
 }

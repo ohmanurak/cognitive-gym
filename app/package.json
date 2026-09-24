@@ -9,7 +9,9 @@
     "build": "npm run data && tsc -b && vite build",
     "test": "vitest run",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "audit:keys": "tsx scripts/audit-keys.ts",
+    "audit:limits": "tsx scripts/audit-limits.ts"
   },
   "dependencies": {
     "katex": "^0.18.9",
