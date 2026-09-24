@@ -98,3 +98,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) {
   .nav { gap: 4px 12px; }
 }
+
+/* Read-only tab: a disabled fieldset disables every control inside without adding chrome. */
+.ro-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
