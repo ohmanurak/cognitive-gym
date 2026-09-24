@@ -84,9 +84,11 @@ export interface State {
   /** Counted Span tests (baseline and retests), including abandoned ladders. */
   spanTests: SpanTest[]
   reflections: Record<string, string>
+  /** Weekly reflection answers per Week, one per workbook question (see weekend.ts). */
+  weekReflections: Record<number, string[]>
 }
 
-export const emptyState = (): State => ({ attempts: {}, drafts: {}, blocks: {}, spans: [], spanTests: [], reflections: {} })
+export const emptyState = (): State => ({ attempts: {}, drafts: {}, blocks: {}, spans: [], spanTests: [], reflections: {}, weekReflections: {} })
 
 export const newBlockState = (): BlockState => ({
   round: 1,
@@ -241,6 +243,14 @@ export function addSpanTrial(s: State, id: string, step: LadderStep, response: s
 export function abandonSpanTests(s: State): State {
   const next = abandonOpen(s.spanTests)
   return next === s.spanTests ? s : { ...s, spanTests: next }
+}
+
+/** Save one answer of a Week's structured reflection. */
+export function setWeekAnswer(s: State, week: number, index: number, text: string): State {
+  const cur = [...(s.weekReflections?.[week] ?? [])]
+  while (cur.length <= index) cur.push('')
+  cur[index] = text
+  return { ...s, weekReflections: { ...s.weekReflections, [week]: cur } }
 }
 
 export function setReflection(s: State, id: string, text: string): State {

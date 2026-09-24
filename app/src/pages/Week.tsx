@@ -1,6 +1,7 @@
 import { blockStatus, nextUp, progressOf } from '../lib/metrics'
 import { DayErrorStep } from './DayErrorStep'
-import { actions, useStore } from '../lib/store'
+import { WeekEndPanel, WeekEndStatus } from '../components/WeekEndPanel'
+import { useStore } from '../lib/store'
 import { blocks, dayMeta, weekMeta } from '../lib/structure'
 
 export function Plan() {
@@ -20,7 +21,14 @@ export function Plan() {
       <div className="muted">Every block in workbook order. Free access; skipping ahead is your call.</div>
       {groups.map((g) => (
         <div key={g.title}>
-          <h2>{g.title}</h2>
+          <h2>
+            {g.title}
+            {g.defs[0]?.week != null && (
+              <span style={{ marginLeft: 12, fontWeight: 'normal' }}>
+                <WeekEndStatus s={s} week={g.defs[0].week} />
+              </span>
+            )}
+          </h2>
           <div className="card">
             <table>
               <tbody>
@@ -66,7 +74,6 @@ export function WeekPage({ week }: { week: number }) {
   const defs = blocks.filter((b) => b.week === week)
   const days = [...new Set(defs.map((d) => d.day!))]
   const p = progressOf(s, defs)
-  const rid = `week${week}`
   return (
     <div>
       <h1>
@@ -94,13 +101,7 @@ export function WeekPage({ week }: { week: number }) {
           </div>
         </div>
       ))}
-      <h2>Weekly reflection</h2>
-      <textarea
-        placeholder="What improved? Which error code led? What will you change?"
-        value={s.reflections[rid] ?? ''}
-        onChange={(e) => actions.setReflection(rid, e.target.value)}
-        style={{ minHeight: 120 }}
-      />
+      <WeekEndPanel s={s} week={week} />
       <p>
         <a href="#/stats">See scorecard and indices</a>
       </p>

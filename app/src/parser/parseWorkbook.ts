@@ -54,8 +54,15 @@ export interface DayMeta {
   limitMin: number | null
 }
 
+export interface WeekReflection {
+  week: number
+  /** Numbered questions in order; the last is the strategy-change (Week 12: 'keep practising') one. */
+  questions: string[]
+}
+
 export interface Workbook {
   items: Item[]
+  reflections: WeekReflection[]
   weeks: WeekMeta[]
   days: DayMeta[]
 }
@@ -232,6 +239,22 @@ export function parseOutline(lines: string[], end: number): { weeks: WeekMeta[];
   return { weeks, days }
 }
 
+/** Numbered questions under each `## Weekly reflection — Week N` heading. */
+export function parseReflections(lines: string[], end: number): WeekReflection[] {
+  const out: WeekReflection[] = []
+  for (let i = 0; i < end; i++) {
+    const h = /^## Weekly reflection — Week (\d+)/.exec(lines[i])
+    if (!h) continue
+    const questions: string[] = []
+    for (let j = i + 1; j < end && !HEADING.test(lines[j]); j++) {
+      const q = /^\d+\.\s+(.*)$/.exec(lines[j])
+      if (q) questions.push(q[1].replace(/\*\*/g, '').replace(/[\s_]+$/, '').replace(/:$/, '').trim())
+    }
+    out.push({ week: Number(h[1]), questions })
+  }
+  return out
+}
+
 export function parseWorkbook(md: string): Workbook {
   const lines = md.split(/\r?\n/)
   const keyStart = lines.findIndex((l) => l.startsWith('# PART 4'))
@@ -241,5 +264,5 @@ export function parseWorkbook(md: string): Workbook {
     it.key = keys.get(it.id) ?? null
     it.timing = parseTiming(it.body)
   }
-  return { items, ...parseOutline(lines, keyStart) }
+  return { items, reflections: parseReflections(lines, keyStart), ...parseOutline(lines, keyStart) }
 }
