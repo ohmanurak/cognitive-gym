@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { UpdatePrompt } from './components/UpdatePrompt'
 import { BlockRunner } from './pages/BlockRunner'
 import { Dashboard } from './pages/Dashboard'
 import { Data } from './pages/Data'
@@ -66,6 +67,7 @@ export default function App() {
         ))}
       </nav>
       <Route hash={hash} />
+      <UpdatePrompt />
     </div>
   )
 }
