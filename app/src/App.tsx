@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BackupBanner } from './components/BackupBanner'
 import { requestPersistence } from './lib/backup'
+import { UpdatePrompt } from './components/UpdatePrompt'
 import { BlockRunner } from './pages/BlockRunner'
 import { Dashboard } from './pages/Dashboard'
 import { Data } from './pages/Data'
@@ -72,6 +73,7 @@ export default function App() {
       </nav>
       <BackupBanner />
       <Route hash={hash} />
+      <UpdatePrompt />
     </div>
   )
 }
