@@ -3,6 +3,7 @@ import { BackupBanner } from './components/BackupBanner'
 import { StartupRestore } from './components/StartupRestore'
 import { requestPersistence } from './lib/backup'
 import { useAutosaveStatus } from './lib/store'
+import { takeOver, useRole } from './lib/writer'
 import { BlockRunner } from './pages/BlockRunner'
 import { Dashboard } from './pages/Dashboard'
 import { Data } from './pages/Data'
@@ -61,6 +62,7 @@ export default function App() {
   const hash = useHash()
   useEffect(requestPersistence, [])
   const backup = useAutosaveStatus()
+  const role = useRole()
   return (
     <div className="shell">
       <nav className="nav">
@@ -78,9 +80,19 @@ export default function App() {
           </a>
         )}
       </nav>
+      {role === 'readonly' && (
+        <div className="notice row" role="status">
+          <span className="grow">Open in another tab. Close it to edit here.</span>
+          <button className="primary" onClick={takeOver}>
+            Take over
+          </button>
+        </div>
+      )}
       <StartupRestore />
-      <BackupBanner />
-      <Route hash={hash} />
+      {role !== 'readonly' && <BackupBanner />}
+      <fieldset disabled={role === 'readonly'} className="ro-fieldset">
+        <Route hash={hash} />
+      </fieldset>
     </div>
   )
 }

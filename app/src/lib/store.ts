@@ -39,8 +39,16 @@ function load(): State {
 let state: State = load()
 const listeners = new Set<() => void>()
 
+/** Read-only tab (another tab holds the writer lock): every action is a no-op, nothing is written. */
+let readOnly = false
+export function setReadOnly(on: boolean) {
+  readOnly = on
+  if (on) autosaver.suppress(true)
+}
+export const isReadOnly = () => readOnly
+
 function commit(next: State) {
-  if (next === state) return
+  if (readOnly || next === state) return
   state = next
   try {
     localStorage.setItem(KEY, JSON.stringify(state))
