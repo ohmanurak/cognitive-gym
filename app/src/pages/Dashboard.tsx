@@ -1,3 +1,4 @@
+import { StageEndStatus } from '../components/StageEndPanel'
 import { blockStatus, nextUp, progressOf } from '../lib/metrics'
 import { useStore } from '../lib/store'
 import { blocks, totalPoints, weekMeta, workbook } from '../lib/structure'
@@ -49,18 +50,19 @@ export function Dashboard() {
 
       <h2>Stages</h2>
       {[
-        { name: 'Baseline', defs: blocks.filter((b) => b.stage === 'baseline') },
+        { name: 'Baseline', stage: 'baseline' as const, defs: blocks.filter((b) => b.stage === 'baseline') },
         ...phases.map((p) => ({
           name: `${p} phase`,
           defs: blocks.filter((b) => b.week !== null && weekMeta(b.week)?.phase === p),
         })),
-        { name: 'Final Examination', defs: blocks.filter((b) => b.stage === 'final') },
-      ].map(({ name, defs }) => {
+        { name: 'Final Examination', stage: 'final' as const, defs: blocks.filter((b) => b.stage === 'final') },
+      ].map(({ name, defs, ...rest }) => {
+        const stage = 'stage' in rest ? rest.stage : undefined
         const p = progressOf(s, defs)
         return (
           <div className="card" key={name}>
             <div className="row">
-              <b>{name}</b>
+              <b>{name}</b> {stage && <StageEndStatus s={s} stage={stage} />}
               <span className="grow" />
               <span className="muted small">
                 {p.itemsDone} / {p.itemsTotal} items
