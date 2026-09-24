@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from 'react'
 import * as core from './state'
 import type { Attempt, Draft, SpanTry, State } from './state'
+import { markChanged } from './backupMeta'
+import { SCHEMA_VERSION, workbookFingerprint } from './integrity'
+import { workbook } from './structure'
 
 // Types and pure helpers stay importable from here so callers do not change.
 export { ERROR_CODES, blockState, elapsedNow, newBlockState } from './state'
@@ -30,8 +33,11 @@ function commit(next: State) {
   } catch {
     /* quota or private mode: keep in memory only */
   }
+  markChanged()
   listeners.forEach((l) => l())
 }
+
+export const getState = () => state
 
 export function useStore(): State {
   return useSyncExternalStore(
@@ -55,7 +61,11 @@ export const actions = {
   setReflection: (id: string, text: string) => commit(core.setReflection(state, id, text)),
 
   exportJson(): string {
-    return JSON.stringify({ app: 'cognitive-gym', version: 1, state }, null, 2)
+    return JSON.stringify(
+      { app: 'cognitive-gym', version: 1, schemaVersion: SCHEMA_VERSION, workbookFingerprint: workbookFingerprint(workbook.items), state },
+      null,
+      2,
+    )
   },
 
   importJson(text: string) {
