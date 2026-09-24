@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { calibrationOf, scopeStats, type Scope, type ScopeStats } from '../lib/metrics'
 import { useStore } from '../lib/store'
+import { repeatedDominantError, speedUpAccuracyDown, weeklySignals } from '../lib/signals'
 import { SpanTestsList } from '../components/SpanTestsList'
 
 const scopes: { label: string; scope: Scope }[] = [
@@ -48,6 +49,9 @@ export function Stats() {
   const rows = scopes.map((x) => ({ ...x, st: scopeStats(s, x.scope) }))
   const sel: ScopeStats = rows[pick].st
   const cal = calibrationOf(s)
+  const weekly = weeklySignals(s)
+  const repeated = repeatedDominantError(weekly)
+  const speedAcc = speedUpAccuracyDown(weekly)
 
   return (
     <div>
@@ -121,6 +125,47 @@ export function Stats() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <h2>Interpretation signals (per week)</h2>
+      {repeated && (
+        <div className="notice" role="alert">
+          Same dominant error ({repeated.code}) for {repeated.weeks.length} weeks in a row (W{repeated.weeks[0]}–W{repeated.weeks[repeated.weeks.length - 1]}). Change the Fix strategy, not just the effort.
+        </div>
+      )}
+      {speedAcc && (
+        <div className="notice" role="alert">
+          Speed rose while accuracy fell (W{speedAcc.fromWeek} → W{speedAcc.toWeek}). Slow down until accuracy recovers.
+        </div>
+      )}
+      <div className="card" style={{ overflowX: 'auto' }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Week</th>
+              <th className="num">Conceptual %</th>
+              <th className="num">Careless %</th>
+              <th className="num">Block D %</th>
+              <th className="num">Blocks A–C %</th>
+              <th className="num">Calib. gap</th>
+            </tr>
+          </thead>
+          <tbody>
+            {weekly.map((w) => (
+              <tr key={w.week}>
+                <td>W{w.week}</td>
+                <td className="num">{n1(w.conceptualPct)}</td>
+                <td className="num">{n1(w.carelessPct)}</td>
+                <td className="num">{n1(w.blockD)}</td>
+                <td className="num">{n1(w.blockABC)}</td>
+                <td className="num">{w.calibrationGap == null ? '·' : `${w.calibrationGap > 0 ? '+' : ''}${w.calibrationGap.toFixed(1)}`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="small muted" style={{ marginTop: 8 }}>
+          Conceptual = Error codes H, A, R, L; careless = the rest (P, WM, C, S, K). Block D well below Blocks A–C means skills are not transferring to novel problems. Calibration gap = expected correct rate for your Confidence ratings minus actual, in points: positive is overconfident, negative underconfident. Blank = no data yet.
+        </div>
       </div>
 
       <h2>Calibration (all stages)</h2>
