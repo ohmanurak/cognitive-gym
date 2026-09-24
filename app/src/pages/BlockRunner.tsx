@@ -8,7 +8,8 @@ import { itemMsNow, overTarget, shouldNudge } from '../lib/itemtime'
 import { blockStatus, latestAttempt } from '../lib/metrics'
 import { actions, blockState, elapsedNow, ERROR_CODES, useStore, type State } from '../lib/store'
 import { itemReady } from '../lib/state'
-import { blockByKey, blocks, freezeMin, itemById, type BlockDef } from '../lib/structure'
+import { blockByKey, blocks, itemById, type BlockDef } from '../lib/structure'
+import { effectiveFreezeMin, effectiveLimit } from '../lib/gate'
 import { TimedSummary } from '../components/TimedSummary'
 import { needsUntimedScore } from '../lib/timed'
 import type { Item } from '../parser/parseWorkbook'
@@ -29,11 +30,13 @@ function Timer({ def, s }: { def: BlockDef; s: State }) {
   }, [b.startedAt])
 
   const elapsed = elapsedNow(b, now)
-  const limitMs = (def.limitMin ?? 0) * 60000
+  const eff = effectiveLimit(s, def)
+  const limitMin = eff.limitMin
+  const limitMs = (limitMin ?? 0) * 60000
   const over = limitMs > 0 && elapsed > limitMs
-  const freezeAt = freezeMin(def)
+  const freezeAt = effectiveFreezeMin(s, def)
   const frozen = freezeAt !== null && elapsed > freezeAt * 60000
-  const hardDiffers = def.hardLimitMin !== null && def.hardLimitMin !== def.limitMin
+  const hardDiffers = def.hardLimitMin !== null && def.hardLimitMin !== limitMin
   const nextMarker = def.paceMarkers.find((m) => m.atMin * 60000 > elapsed)
 
   useEffect(() => {
@@ -45,9 +48,9 @@ function Timer({ def, s }: { def: BlockDef; s: State }) {
       <div className="row">
         <span className={`timer${over ? ' over' : ''}`}>{fmt(elapsed)}</span>
         <span className="muted">
-          {def.limitMin === null
+          {limitMin === null
             ? 'no stated limit'
-            : `/ ${def.limitMin} min ${def.strict ? (hardDiffers ? `(target; hard limit ${def.hardLimitMin})` : '(strict)') : '(soft)'}`}
+            : `/ ${limitMin} min ${def.strict ? (hardDiffers ? `(target; hard limit ${def.hardLimitMin})` : '(strict)') : '(soft)'}`}
         </span>
         <span className="grow" />
         {!b.committed &&
@@ -59,6 +62,11 @@ function Timer({ def, s }: { def: BlockDef; s: State }) {
             </button>
           ))}
       </div>
+      {eff.note && (
+        <div className="small muted" style={{ marginTop: 6 }}>
+          {eff.note}
+        </div>
+      )}
       {def.paceMarkers.length > 0 && !b.committed && nextMarker && (
         <div className="small muted" style={{ marginTop: 6 }}>
           Pace (not binding): {nextMarker.label} at {nextMarker.atMin}:00
@@ -66,7 +74,7 @@ function Timer({ def, s }: { def: BlockDef; s: State }) {
       )}
       {over && hardDiffers && !frozen && !b.committed && (
         <div className="notice">
-          Target of {def.limitMin} min reached. The hard limit is {def.hardLimitMin} min; answers freeze then.
+          Target of {limitMin} min reached. The hard limit is {def.hardLimitMin} min; answers freeze then.
         </div>
       )}
       {frozen && !b.committed && (
