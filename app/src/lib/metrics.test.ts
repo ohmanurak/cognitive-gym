@@ -38,7 +38,7 @@ describe('progress', () => {
     expect(blockStatus(s, def)).toBe('committed')
     s.attempts['W1D1-A1'][0].score = 3
     expect(blockStatus(s, def)).toBe('done')
-    expect(progressOf(s, [def])).toEqual({ blocksDone: 1, blocksTotal: 1, itemsDone: 1, itemsTotal: 1 })
+    expect(progressOf(s, [def])).toMatchObject({ blocksDone: 1, itemsDone: 1, itemsTotal: 1, stepsTotal: 1, stepsDone: 0 })
   })
 })
 

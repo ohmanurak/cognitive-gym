@@ -1,3 +1,4 @@
+import { weakFixHint } from '../lib/erroranalysis'
 import { useEffect, useState } from 'react'
 import { Md } from '../components/Md'
 import { RubricDims } from '../components/RubricDims'
@@ -284,6 +285,7 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
             value={attempt.fix ?? ''}
             onChange={(e) => actions.mark(item.id, { fix: e.target.value })}
           />
+          {weakFixHint(attempt.fix) && <div className="muted small">{weakFixHint(attempt.fix)}</div>}
         </div>
       )}
     </div>
