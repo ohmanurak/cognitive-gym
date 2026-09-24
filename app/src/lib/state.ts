@@ -4,6 +4,8 @@
  * `store.ts` wraps these with persistence and React subscriptions.
  */
 
+import { closeStretch, focusItem } from './itemtime'
+
 export type ErrorCode = 'P' | 'R' | 'A' | 'WM' | 'H' | 'L' | 'C' | 'S' | 'K'
 export const ERROR_CODES: { code: ErrorCode; name: string }[] = [
   { code: 'P', name: 'Perception / missed pattern' },
@@ -44,6 +46,12 @@ export interface BlockState {
   roundElapsed: number[]
   /** Commit date (epoch ms) recorded at each commit, index = round - 1. */
   committedAt: number[]
+  /** Focused ms per Item this round, excluding the open stretch (see itemtime.ts). */
+  itemMs: Record<string, number>
+  /** itemMs recorded at each commit, index = round - 1. */
+  roundItemMs: Record<string, number>[]
+  /** Item currently focused, and since when (epoch ms). */
+  focus: { itemId: string; since: number } | null
 }
 
 export interface SpanTry {
@@ -76,6 +84,9 @@ export const newBlockState = (): BlockState => ({
   snapshot: null,
   roundElapsed: [],
   committedAt: [],
+  itemMs: {},
+  roundItemMs: [],
+  focus: null,
 })
 
 export function blockState(s: State, key: string): BlockState {
@@ -104,7 +115,7 @@ export function startClock(s: State, key: string, now: number): State {
 export function pauseClock(s: State, key: string, now: number): State {
   const b = blockState(s, key)
   if (b.startedAt === null) return s
-  return patchBlock(s, key, { startedAt: null, elapsedMs: elapsedNow(b, now) })
+  return patchBlock(s, key, { ...closeStretch(b, now), startedAt: null, elapsedMs: elapsedNow(b, now) })
 }
 
 /** Freeze the answers as they stand when a strict clock expires (the `T` mark). Only the first freeze counts. */
@@ -139,6 +150,9 @@ export function commitBlock(s: State, key: string, itemIds: string[], now: numbe
   const elapsed = elapsedNow(b, now)
   const roundElapsed = [...b.roundElapsed]
   roundElapsed[b.round - 1] = elapsed
+  const closed = closeStretch(b, now)
+  const roundItemMs = [...b.roundItemMs]
+  roundItemMs[b.round - 1] = closed.itemMs
   const committedAt = [...b.committedAt]
   committedAt[b.round - 1] = now
   return patchBlock({ ...s, attempts, drafts }, key, {
@@ -147,6 +161,9 @@ export function commitBlock(s: State, key: string, itemIds: string[], now: numbe
     elapsedMs: elapsed,
     roundElapsed,
     committedAt,
+    itemMs: closed.itemMs,
+    roundItemMs,
+    focus: null,
   })
 }
 
@@ -161,7 +178,14 @@ export function mark(s: State, itemId: string, patch: Partial<Attempt>): State {
 /** Start another round of a Block. Retries never affect Indices (first attempt only). */
 export function retryBlock(s: State, key: string): State {
   const b = blockState(s, key)
-  return patchBlock(s, key, { round: b.round + 1, committed: false, startedAt: null, elapsedMs: 0, snapshot: null })
+  return patchBlock(s, key, { round: b.round + 1, committed: false, startedAt: null, elapsedMs: 0, snapshot: null, itemMs: {}, focus: null })
+}
+
+/** Focus an Item (null = none); time accrues to it while the Block clock runs. */
+export function focusItemIn(s: State, key: string, itemId: string | null, now: number): State {
+  const b = blockState(s, key)
+  if (b.committed) return s
+  return patchBlock(s, key, focusItem(b, itemId, now))
 }
 
 export function addSpan(s: State, t: SpanTry): State {

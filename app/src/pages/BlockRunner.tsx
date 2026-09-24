@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Md } from '../components/Md'
 import { suggest } from '../lib/grade'
+import { itemMsNow, overTarget, shouldNudge } from '../lib/itemtime'
 import { blockStatus, latestAttempt } from '../lib/metrics'
 import { actions, blockState, elapsedNow, ERROR_CODES, useStore, type State } from '../lib/store'
 import { blockByKey, blocks, freezeMin, itemById, type BlockDef } from '../lib/structure'
@@ -112,9 +113,28 @@ function ItemCard({ item, def, s }: { item: Item; def: BlockDef; s: State }) {
   const attempt = b.committed ? latestAttempt(s, item.id) : undefined
   const isCover = /cover-and-reveal/i.test(item.body) && !b.committed
 
+  // Re-render while this Item is being timed so the nudge and S mark appear live.
+  const [now, setNow] = useState(Date.now())
+  const timing = !b.committed && b.startedAt !== null && b.focus?.itemId === item.id
+  useEffect(() => {
+    if (!timing) return
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [timing])
+  const ms = itemMsNow(b, item.id, now)
+  const overS = item.week !== null && item.week >= 5 && item.week <= 6 && item.timing?.kind === 'target' && overTarget(ms, item.timing.minutes)
+  const nudge = !b.committed && shouldNudge(item.week, ms, draft.answer.trim() !== '')
+
   const body = <Md>{item.body}</Md>
   return (
-    <div className="card" id={item.id}>
+    <div
+      className="card"
+      id={item.id}
+      onFocus={() => !b.committed && actions.focusItem(def.key, item.id)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) actions.focusItem(def.key, null)
+      }}
+    >
       <div className="item-head">
         <span className="item-id">{item.id}</span>
         <span className="pill">{item.skill}</span>
@@ -128,7 +148,9 @@ function ItemCard({ item, def, s }: { item: Item; def: BlockDef; s: State }) {
             ⏱ {item.timing.kind === 'target' ? 'target' : item.timing.strict ? 'strict drill' : 'limit'} {item.timing.minutes} min
           </span>
         )}
+        {overS && <span className="pill">S · over target by more than 50%</span>}
       </div>
+      {nudge && <div className="notice">Over 75 s on this item. Consider the Skip flag and move on.</div>}
       <div style={{ marginTop: 8 }}>{isCover ? <CoverReveal>{body}</CoverReveal> : body}</div>
 
       {!b.committed ? (
