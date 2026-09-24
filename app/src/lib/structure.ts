@@ -28,6 +28,10 @@ export interface BlockDef {
   limitSource: LimitSource
   /** Non-binding suggested section ends (Final Examination). */
   paceMarkers: PaceMarker[]
+  /** Progress units when itemIds is empty (Span test Block counts as 2). */
+  units?: number
+  /** Counted Span test Block, run on its own page instead of BlockRunner. */
+  spanTest?: boolean
 }
 
 const BLOCK_NAME: Record<string, string> = {
@@ -106,6 +110,24 @@ function build(): BlockDef[] {
   const base = group(workbook.items.filter((i) => i.stage === 'baseline'), (i) => i.block)
   for (const [b, items] of [...base].sort()) {
     const meta = BASELINE[b]
+    if (b === '2') {
+      out.push({
+        key: 'base:2span',
+        stage: 'baseline',
+        week: null,
+        day: null,
+        label: 'Baseline · Section 2A/2B',
+        title: 'Span test (forward and backward)',
+        itemIds: [],
+        limitMin: null,
+        strict: false,
+        hardLimitMin: null,
+        limitSource: 'baseline',
+        paceMarkers: [],
+        units: 2,
+        spanTest: true,
+      })
+    }
     out.push({
       key: `base:${b}`,
       stage: 'baseline',

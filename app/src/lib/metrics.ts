@@ -2,6 +2,7 @@ import type { Item, Skill } from '../parser/parseWorkbook'
 import { dimsTotal, hasRubric } from './rubric'
 import { calibration, efficiency, patternIndex, rubricIndex, workingMemoryIndex } from './indices'
 import { errorAnalysis, firstOpenMissBlock, stepUnits } from './erroranalysis'
+import { baselineSpanDone } from './spantest'
 import { blocks, itemById, type BlockDef } from './structure'
 import { blockState, type Attempt, type ErrorCode, type SpanTry, type State } from './store'
 
@@ -17,6 +18,10 @@ export function firstAttempt(s: State, id: string): Attempt | undefined {
 }
 
 export function blockStatus(s: State, def: BlockDef): Status {
+  if (def.spanTest) {
+    if (baselineSpanDone(s.spanTests)) return 'done'
+    return s.spanTests.some((t) => t.kind === 'baseline') ? 'in-progress' : 'todo'
+  }
   const b = blockState(s, def.key)
   if (b.committed) {
     const allScored = def.itemIds.every((id) => latestAttempt(s, id)?.score != null)
@@ -45,8 +50,9 @@ export function progressOf(s: State, defs: BlockDef[]): Progress {
   let itemsDone = 0
   let itemsTotal = 0
   for (const d of defs) {
-    itemsTotal += d.itemIds.length
+    itemsTotal += d.itemIds.length + (d.units ?? 0)
     if (blockStatus(s, d) === 'done') blocksDone++
+    if (d.units && blockStatus(s, d) === 'done') itemsDone += d.units
     itemsDone += d.itemIds.filter((id) => latestAttempt(s, id)?.score != null).length
   }
   const units = stepUnits(defs)

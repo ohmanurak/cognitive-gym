@@ -3,6 +3,7 @@
  * (state, input, now): no browser storage, no subscriptions, no real clock.
  * `store.ts` wraps these with persistence and React subscriptions.
  */
+import { abandonOpen, recordTrial, startSpanTest as newSpanTest, type LadderStep, type SpanTest, type SpanTestKind } from './spantest'
 
 import { closeStretch, focusItem } from './itemtime'
 
@@ -78,10 +79,12 @@ export interface State {
   drafts: Record<string, Draft>
   blocks: Record<string, BlockState>
   spans: SpanTry[]
+  /** Counted Span tests (baseline and retests), including abandoned ladders. */
+  spanTests: SpanTest[]
   reflections: Record<string, string>
 }
 
-export const emptyState = (): State => ({ attempts: {}, drafts: {}, blocks: {}, spans: [], reflections: {} })
+export const emptyState = (): State => ({ attempts: {}, drafts: {}, blocks: {}, spans: [], spanTests: [], reflections: {} })
 
 export const newBlockState = (): BlockState => ({
   round: 1,
@@ -222,6 +225,20 @@ export function focusItemIn(s: State, key: string, itemId: string | null, now: n
 
 export function addSpan(s: State, t: SpanTry): State {
   return { ...s, spans: [...s.spans, t] }
+}
+
+export function startSpanTest(s: State, id: string, kind: SpanTestKind, now: number): State {
+  return { ...s, spanTests: [...abandonOpen(s.spanTests), newSpanTest(id, kind, now)] }
+}
+
+export function addSpanTrial(s: State, id: string, step: LadderStep, response: string, now: number): State {
+  return { ...s, spanTests: s.spanTests.map((t) => (t.id === id ? recordTrial(t, step, response, now) : t)) }
+}
+
+/** Leaving a ladder unfinished forfeits it: kept in the export, never counted. */
+export function abandonSpanTests(s: State): State {
+  const next = abandonOpen(s.spanTests)
+  return next === s.spanTests ? s : { ...s, spanTests: next }
 }
 
 export function setReflection(s: State, id: string, text: string): State {

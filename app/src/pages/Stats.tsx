@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { calibrationOf, scopeStats, type Scope, type ScopeStats } from '../lib/metrics'
 import { useStore } from '../lib/store'
+import { SpanTestsList } from '../components/SpanTestsList'
 
 const scopes: { label: string; scope: Scope }[] = [
   { label: 'Base', scope: { kind: 'baseline' } },
@@ -79,6 +80,8 @@ export function Stats() {
           Pattern uses PD items and block times. Abstraction and Hypothesis use your rubric self-scores as a share of available points. WM needs a reliable backward digit span from the trainer. Efficiency = correct Processing items per minute. Blank = no data yet.
         </div>
       </div>
+
+      <SpanTestsList />
 
       <h2>Trend: overall accuracy</h2>
       <div className="card">

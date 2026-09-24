@@ -4,6 +4,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Data } from './pages/Data'
 import { Errors } from './pages/Errors'
 import { Span } from './pages/Span'
+import { SpanTestPage } from './pages/SpanTest'
 import { Stats } from './pages/Stats'
 import { Plan, WeekPage } from './pages/Week'
 
@@ -25,7 +26,7 @@ const NAV = [
   ['#/plan', 'Plan'],
   ['#/stats', 'Progress'],
   ['#/errors', 'Errors'],
-  ['#/span', 'Digit span'],
+  ['#/span', 'Span practice'],
   ['#/data', 'Data'],
 ] as const
 
@@ -37,6 +38,7 @@ function Route({ hash }: { hash: string }) {
     case 'week':
       return <WeekPage week={Number(arg)} />
     case 'block':
+      if (arg === 'base:2span') return <SpanTestPage />
       return <BlockRunner key={arg} blockKey={decodeURIComponent(arg)} />
     case 'stats':
       return <Stats />
