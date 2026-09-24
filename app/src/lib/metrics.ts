@@ -4,6 +4,7 @@ import { calibration, efficiency, isProvisional, patternIndex, rubricIndex } fro
 import { errorAnalysis, firstOpenMissBlock, stepUnits } from './erroranalysis'
 import { wmiFor } from './wmi'
 import { weekEnd, weekEndUnits } from './weekend'
+import { stageEnd } from './stageend'
 import { baselineSpanDone } from './spantest'
 import { blocks, itemById, type BlockDef } from './structure'
 import { blockState, type Attempt, type ErrorCode, type SpanTry, type State } from './store'
@@ -65,9 +66,12 @@ export function progressOf(s: State, defs: BlockDef[]): Progress {
   // One week-end unit (Day 6 error analysis + reflection) per Week.
   const weeks = weekEndUnits(defs)
   const weekEndsDone = weeks.filter((w) => weekEnd(s, w).complete).length
+  // Baseline and Final each add one unit: error analysis + 4-question reflection.
+  const stages = (['baseline', 'final'] as const).filter((k) => defs.some((d) => d.stage === k))
+  const stagesDone = stages.filter((k) => stageEnd(s, k).complete).length
   return {
-    blocksDone: blocksDone + stepsDone + weekEndsDone,
-    blocksTotal: defs.length + units.length + weeks.length,
+    blocksDone: blocksDone + stepsDone + weekEndsDone + stagesDone,
+    blocksTotal: defs.length + units.length + weeks.length + stages.length,
     weekEndsDone,
     weekEndsTotal: weeks.length,
     itemsDone,

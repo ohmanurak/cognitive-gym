@@ -1,5 +1,6 @@
 import { blockStatus, nextUp, progressOf } from '../lib/metrics'
 import { DayErrorStep } from './DayErrorStep'
+import { StageEndPanel } from '../components/StageEndPanel'
 import { WeekEndPanel, WeekEndStatus } from '../components/WeekEndPanel'
 import { useStore } from '../lib/store'
 import { blocks, dayMeta, weekMeta } from '../lib/structure'
@@ -61,6 +62,9 @@ export function Plan() {
               </tbody>
             </table>
           </div>
+          {(g.defs[0]?.stage === 'baseline' || g.defs[0]?.stage === 'final') && (
+            <StageEndPanel s={s} stage={g.defs[0].stage} />
+          )}
         </div>
       ))}
     </div>
