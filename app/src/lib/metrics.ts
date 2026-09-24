@@ -2,6 +2,7 @@ import type { Item, Skill } from '../parser/parseWorkbook'
 import { dimsTotal, hasRubric } from './rubric'
 import { calibration, efficiency, patternIndex, rubricIndex, workingMemoryIndex } from './indices'
 import { errorAnalysis, firstOpenMissBlock, stepUnits } from './erroranalysis'
+import { weekEnd, weekEndUnits } from './weekend'
 import { baselineSpanDone } from './spantest'
 import { blocks, itemById, type BlockDef } from './structure'
 import { blockState, type Attempt, type ErrorCode, type SpanTry, type State } from './store'
@@ -43,6 +44,9 @@ export interface Progress {
   /** Day error-analysis steps (Days 1-5); one unit per Day, also counted in blocksDone/blocksTotal. */
   stepsDone: number
   stepsTotal: number
+  /** Week-end units (Day 6 error analysis + reflection); one per Week, also counted in blocksDone/blocksTotal. */
+  weekEndsDone: number
+  weekEndsTotal: number
 }
 
 export function progressOf(s: State, defs: BlockDef[]): Progress {
@@ -57,9 +61,14 @@ export function progressOf(s: State, defs: BlockDef[]): Progress {
   }
   const units = stepUnits(defs)
   const stepsDone = units.filter((u) => errorAnalysis(s, u.week, u.day).complete).length
+  // One week-end unit (Day 6 error analysis + reflection) per Week.
+  const weeks = weekEndUnits(defs)
+  const weekEndsDone = weeks.filter((w) => weekEnd(s, w).complete).length
   return {
-    blocksDone: blocksDone + stepsDone,
-    blocksTotal: defs.length + units.length,
+    blocksDone: blocksDone + stepsDone + weekEndsDone,
+    blocksTotal: defs.length + units.length + weeks.length,
+    weekEndsDone,
+    weekEndsTotal: weeks.length,
     itemsDone,
     itemsTotal,
     stepsDone,

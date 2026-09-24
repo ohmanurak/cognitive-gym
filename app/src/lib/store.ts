@@ -72,6 +72,7 @@ export const actions = {
     const next = core.abandonSpanTests(state)
     if (next !== state) commit(next)
   },
+  setWeekAnswer: (week: number, index: number, text: string) => commit(core.setWeekAnswer(state, week, index, text)),
   setReflection: (id: string, text: string) => commit(core.setReflection(state, id, text)),
 
   exportJson(): string {

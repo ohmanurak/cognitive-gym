@@ -81,3 +81,16 @@ describe('Item timing labels', () => {
     expect(parseTiming('(a) Level after 1 minute')).toBeNull()
   })
 })
+
+describe('weekly reflection questions', () => {
+  it('parses 12 weeks in order, last question is the strategy one', () => {
+    expect(wb.reflections.map((r) => r.week)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+    for (const r of wb.reflections) {
+      expect(r.questions.length).toBeGreaterThanOrEqual(7)
+      const last = r.questions[r.questions.length - 1]
+      // Week 12 closes the programme: its last question is what to keep practising.
+      expect(last).toMatch(r.week === 12 ? /keep practising/i : /strategy change/i)
+      expect(last).not.toMatch(/[*_]/)
+    }
+  })
+})
