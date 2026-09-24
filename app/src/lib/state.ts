@@ -30,6 +30,8 @@ export interface Attempt {
   score: number | null
   /** Score of the Untimed answer, only set when it differs from T; `score` stays the Timed score. */
   untimedScore?: number | null
+  /** Rubric dimensions (open AB/HT Items): five 0-2 scores, null = unset. */
+  dims?: (number | null)[]
   errorCode?: ErrorCode
   nature?: 'Con' | 'Car'
   assumption?: string
