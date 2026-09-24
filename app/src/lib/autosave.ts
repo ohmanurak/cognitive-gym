@@ -33,6 +33,10 @@ export interface Autosaver {
   notify(): void
   /** Tab hidden or closing: save now if milestones changed since the last good save. */
   flush(): void
+  /** Save now regardless of milestones (startup write, after applying a file merge). */
+  saveNow(): void
+  /** While true nothing is written (notify, flush, saveNow are no-ops). Used when the file must not be overwritten. */
+  suppress(on: boolean): void
   getStatus(): AutosaveStatus
   subscribe(l: () => void): () => void
 }
@@ -45,6 +49,7 @@ export function createAutosaver(deps: AutosaveDeps): Autosaver {
   let lastBackupAt: number | null = null
   let status: AutosaveStatus = 'pending'
   let timer: unknown = null
+  let suppressed = false
   let chain: Promise<void> = Promise.resolve()
   const listeners = new Set<() => void>()
 
@@ -93,15 +98,29 @@ export function createAutosaver(deps: AutosaveDeps): Autosaver {
 
   return {
     notify() {
+      if (suppressed) return
       const cur = deps.milestones()
       if (![...cur].some((m) => !handled.has(m))) return
       if (timer !== null) deps.clearTimer(timer)
       timer = deps.setTimer(run, DEBOUNCE_MS)
     },
     flush() {
+      if (suppressed) return
       if (sameSet(deps.milestones(), saved)) return
       if (timer !== null) deps.clearTimer(timer)
       run()
+    },
+    saveNow() {
+      if (suppressed) return
+      if (timer !== null) deps.clearTimer(timer)
+      run()
+    },
+    suppress(on) {
+      suppressed = on
+      if (on && timer !== null) {
+        deps.clearTimer(timer)
+        timer = null
+      }
     },
     getStatus: () => status,
     subscribe(l) {

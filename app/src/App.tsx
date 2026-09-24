@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BackupBanner } from './components/BackupBanner'
+import { StartupRestore } from './components/StartupRestore'
 import { requestPersistence } from './lib/backup'
 import { useAutosaveStatus } from './lib/store'
 import { BlockRunner } from './pages/BlockRunner'
@@ -77,6 +78,7 @@ export default function App() {
           </a>
         )}
       </nav>
+      <StartupRestore />
       <BackupBanner />
       <Route hash={hash} />
     </div>
