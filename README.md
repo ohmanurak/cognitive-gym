@@ -43,3 +43,24 @@ Materials: pen, paper, timer. No calculator or web search unless an item says so
 ## Discipline rule
 
 Never open Part 4 (answer key) before committing an answer and a confidence rating for every item in the block. Checking mid-block destroys the diagnostic value.
+
+## Practice app (run it on your computer)
+
+A local web app that runs the workbook for you: timed Blocks, Answer Key hidden until you commit, scoring, error log and progress. Your data stays in your browser.
+
+**You need:** [Node.js 22 or newer](https://nodejs.org) (the LTS installer is fine) and [Git](https://git-scm.com).
+
+```sh
+git clone https://github.com/ohmanurak/cognitive-gym.git
+cd cognitive-gym/app
+npm ci
+npm run dev
+```
+
+Open the address it prints (usually http://localhost:5173). To run it again later, open a terminal in the `app` folder and run `npm run dev`.
+
+Tips:
+- Progress is stored in this browser on this computer. Use the **Data** page to export a backup, and to restore it on another browser or machine.
+- Use the same address every time; a different address or port is a different, empty store.
+- Update: `git pull`, then `npm ci`, then `npm run dev`.
+- More (tests, build, deploy, release checklist): [app/README.md](app/README.md).

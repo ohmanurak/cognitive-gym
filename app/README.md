@@ -2,6 +2,17 @@
 
 Local-first practice app for the workbook in `../workbook/Cognitive_Gym_Workbook.md`. Vite + React + TypeScript. No backend; progress lives in the browser's storage. Vocabulary: `../CONTEXT.md`.
 
+## Quick start
+
+```sh
+git clone https://github.com/ohmanurak/cognitive-gym.git
+cd cognitive-gym/app
+npm ci
+npm run dev
+```
+
+Then open the address printed in the terminal (usually http://localhost:5173). Needs Node 22+ and Git. Progress is stored in your browser; back it up from the Data page.
+
 ## Setup
 
 Node 22+.
