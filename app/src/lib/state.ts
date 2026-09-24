@@ -24,6 +24,8 @@ export interface Attempt {
   /** Answer as it stood when a strict clock ran out (the `T` mark). */
   atTimeout?: string
   score: number | null
+  /** Score of the Untimed answer, only set when it differs from T; `score` stays the Timed score. */
+  untimedScore?: number | null
   errorCode?: ErrorCode
   nature?: 'Con' | 'Car'
   assumption?: string

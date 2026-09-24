@@ -4,6 +4,8 @@ import { suggest } from '../lib/grade'
 import { blockStatus, latestAttempt } from '../lib/metrics'
 import { actions, blockState, elapsedNow, ERROR_CODES, useStore, type State } from '../lib/store'
 import { blockByKey, blocks, freezeMin, itemById, type BlockDef } from '../lib/structure'
+import { TimedSummary } from '../components/TimedSummary'
+import { needsUntimedScore } from '../lib/timed'
 import type { Item } from '../parser/parseWorkbook'
 
 const SKIPPED = '↷ skipped'
@@ -166,6 +168,7 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
   const key = item.key!
   const hint = suggest(attempt.answer, key.expected, key.open)
   const options = Array.from({ length: item.points + 1 }, (_, i) => i)
+  const second = needsUntimedScore(attempt)
   const wrong = attempt.score != null && attempt.score < item.points
 
   return (
@@ -175,7 +178,7 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
       </div>
       <div style={{ whiteSpace: 'pre-wrap' }}>{attempt.answer}</div>
       {attempt.atTimeout !== undefined && attempt.atTimeout !== attempt.answer && (
-        <div className="small muted">At time-out (T): {attempt.atTimeout || '(blank)'}</div>
+        <div className="small muted">Timed answer (T, frozen at the limit): {attempt.atTimeout || '(blank)'}</div>
       )}
 
       <div className="key">
@@ -187,7 +190,7 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
 
       <div className="row" style={{ marginTop: 10 }}>
         <span className="small muted">
-          Score
+          {second ? 'Timed score (T)' : 'Score'}
           {hint === 'full' && ' (looks correct)'}
           {hint === 'unsure' && ' (check parts)'}
           {hint === 'none' && (key.open ? ' (rubric, self-score)' : '')}
@@ -202,6 +205,21 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
           </button>
         ))}
       </div>
+
+      {second && (
+        <div className="row" style={{ marginTop: 6 }}>
+          <span className="small muted">Untimed score (U): {attempt.answer || '(blank)'}</span>
+          {options.map((n) => (
+            <button
+              key={n}
+              className={attempt.untimedScore === n ? 'on' : ''}
+              onClick={() => actions.mark(item.id, { untimedScore: n })}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      )}
 
       {wrong && (
         <div style={{ marginTop: 10 }}>
@@ -288,6 +306,8 @@ export function BlockRunner({ blockKey }: { blockKey: string }) {
       {items.map((it) => (
         <ItemCard key={it.id} item={it} def={def} s={s} />
       ))}
+
+      {b.committed && <TimedSummary s={s} itemIds={def.itemIds} />}
 
       <div className="row" style={{ marginTop: 16 }}>
         {!b.committed ? (
