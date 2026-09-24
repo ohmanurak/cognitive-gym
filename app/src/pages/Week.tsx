@@ -1,4 +1,5 @@
 import { blockStatus, nextUp, progressOf } from '../lib/metrics'
+import { DayErrorStep } from './DayErrorStep'
 import { actions, useStore } from '../lib/store'
 import { blocks, dayMeta, weekMeta } from '../lib/structure'
 
@@ -26,6 +27,7 @@ export function Plan() {
                 {g.defs.map((d) => {
                   const st = blockStatus(s, d)
                   const dm = d.week && d.day ? dayMeta(d.week, d.day) : undefined
+                  const lastOfDay = d.week != null && g.defs[g.defs.indexOf(d) + 1]?.day !== d.day
                   return (
                     <tr key={d.key}>
                       <td style={{ width: 130 }}>
@@ -35,6 +37,11 @@ export function Plan() {
                         {d.title}
                         {dm && <span className="muted small"> · {dm.title}</span>}
                         {next?.key === d.key && <span className="pill"> next up</span>}
+                        {lastOfDay && d.week && d.day && (
+                          <div>
+                            <DayErrorStep s={s} week={d.week} day={d.day} />
+                          </div>
+                        )}
                       </td>
                       <td className="num small muted">{d.itemIds.length} items</td>
                       <td className="num">
@@ -73,6 +80,9 @@ export function WeekPage({ week }: { week: number }) {
           <b>
             Day {d} · {dayMeta(week, d)?.title}
           </b>
+          <div style={{ float: 'right' }}>
+            <DayErrorStep s={s} week={week} day={d} />
+          </div>
           <div className="row" style={{ marginTop: 6 }}>
             {defs
               .filter((x) => x.day === d)

@@ -1,3 +1,4 @@
+import { weakFixHint } from '../lib/erroranalysis'
 import { useState } from 'react'
 import { ERROR_CODES, useStore, type ErrorCode } from '../lib/store'
 import { blockOfItem, itemById } from '../lib/structure'
@@ -48,7 +49,12 @@ export function Errors() {
               <span className="pill">round {a.round}</span>
             </div>
             {a.assumption && <div className="small">Failed assumption: {a.assumption}</div>}
-            {a.fix ? <div>Fix: {a.fix}</div> : <div className="muted small">No fix written yet.</div>}
+            {a.fix ? (
+              <div>
+                Fix: {a.fix}
+                {weakFixHint(a.fix) && <div className="muted small">{weakFixHint(a.fix)}</div>}
+              </div>
+            ) : <div className="muted small">No fix written yet.</div>}
           </div>
         )
       })}

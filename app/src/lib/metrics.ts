@@ -1,5 +1,6 @@
 import type { Item, Skill } from '../parser/parseWorkbook'
 import { calibration, efficiency, patternIndex, rubricIndex, workingMemoryIndex } from './indices'
+import { errorAnalysis, firstOpenMissBlock, stepUnits } from './erroranalysis'
 import { blocks, itemById, type BlockDef } from './structure'
 import { blockState, type Attempt, type ErrorCode, type SpanTry, type State } from './store'
 
@@ -33,6 +34,9 @@ export interface Progress {
   blocksTotal: number
   itemsDone: number
   itemsTotal: number
+  /** Day error-analysis steps (Days 1-5); one unit per Day, also counted in blocksDone/blocksTotal. */
+  stepsDone: number
+  stepsTotal: number
 }
 
 export function progressOf(s: State, defs: BlockDef[]): Progress {
@@ -44,12 +48,29 @@ export function progressOf(s: State, defs: BlockDef[]): Progress {
     if (blockStatus(s, d) === 'done') blocksDone++
     itemsDone += d.itemIds.filter((id) => latestAttempt(s, id)?.score != null).length
   }
-  return { blocksDone, blocksTotal: defs.length, itemsDone, itemsTotal }
+  const units = stepUnits(defs)
+  const stepsDone = units.filter((u) => errorAnalysis(s, u.week, u.day).complete).length
+  return {
+    blocksDone: blocksDone + stepsDone,
+    blocksTotal: defs.length + units.length,
+    itemsDone,
+    itemsTotal,
+    stepsDone,
+    stepsTotal: units.length,
+  }
 }
 
-/** First block in workbook order that is not finished. */
+/** First block in workbook order that is not finished, or holds a miss awaiting error analysis. */
 export function nextUp(s: State): BlockDef | undefined {
-  return blocks.find((b) => blockStatus(s, b) !== 'done')
+  for (const [i, b] of blocks.entries()) {
+    if (blockStatus(s, b) !== 'done') return b
+    const last = blocks[i + 1]?.week !== b.week || blocks[i + 1]?.day !== b.day
+    if (last && b.week != null && b.day != null) {
+      const open = firstOpenMissBlock(s, b.week, b.day)
+      if (open) return open
+    }
+  }
+  return undefined
 }
 
 export type Scope = { kind: 'baseline' } | { kind: 'week'; week: number } | { kind: 'final' }
