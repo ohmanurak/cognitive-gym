@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { actions, useStore } from '../lib/store'
+import { actions, useAutosaveStatus, useStore } from '../lib/store'
 import { currentFingerprint, downloadExport, orphansNow } from '../lib/backup'
 import { fingerprintMatches } from '../lib/integrity'
 import { ImportPreview } from '../components/ImportPreview'
@@ -11,6 +11,7 @@ export function Data() {
   const [msg, setMsg] = useState('')
   const [pending, setPending] = useState<{ incoming: State; plan: MergePlan; warn: string } | null>(null)
   useStore()
+  const backup = useAutosaveStatus()
   const orphans = orphansNow()
 
   async function load(f: File) {
@@ -67,6 +68,16 @@ export function Data() {
           }}
         />
       )}
+      <div className="card">
+        <b>File backup: {backup === 'pending' ? 'on (nothing saved yet)' : backup}</b>
+        <div className="muted small">
+          {backup === 'failed'
+            ? 'The last save to the progress file failed. It retries at your next completed Block, Span test or reflection.'
+            : backup === 'off'
+              ? 'No save file available (only the dev server writes one). Export JSON to keep a backup.'
+              : 'Progress is saved to a file when you finish a Block, error analysis, reflection or Span test.'}
+        </div>
+      </div>
       {msg && <div className="notice">{msg}</div>}
       <div className="card">
         <h2>Orphaned data</h2>

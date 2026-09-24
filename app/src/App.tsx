@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BackupBanner } from './components/BackupBanner'
 import { requestPersistence } from './lib/backup'
+import { useAutosaveStatus } from './lib/store'
 import { BlockRunner } from './pages/BlockRunner'
 import { Dashboard } from './pages/Dashboard'
 import { Data } from './pages/Data'
@@ -58,6 +59,7 @@ function Route({ hash }: { hash: string }) {
 export default function App() {
   const hash = useHash()
   useEffect(requestPersistence, [])
+  const backup = useAutosaveStatus()
   return (
     <div className="shell">
       <nav className="nav">
@@ -69,6 +71,11 @@ export default function App() {
             {label}
           </a>
         ))}
+        {backup === 'failed' && (
+          <a href="#/data" className="muted small" style={{ marginLeft: 'auto' }} title="File backup failed. Open Data.">
+            backup failed
+          </a>
+        )}
       </nav>
       <BackupBanner />
       <Route hash={hash} />
