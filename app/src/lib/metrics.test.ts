@@ -33,7 +33,7 @@ describe('progress', () => {
   it('a block is done once committed and every item scored', () => {
     const def = blockByKey.get('w1d1:A')!
     const s = empty()
-    s.blocks[def.key] = { round: 1, committed: true, startedAt: null, elapsedMs: 0, snapshot: null, roundElapsed: [1000] }
+    s.blocks[def.key] = { round: 1, committed: true, startedAt: null, elapsedMs: 0, snapshot: null, roundElapsed: [1000], committedAt: [1000] }
     s.attempts['W1D1-A1'] = [{ round: 1, answer: '79', confidence: 4, score: null }]
     expect(blockStatus(s, def)).toBe('committed')
     s.attempts['W1D1-A1'][0].score = 3
@@ -46,7 +46,7 @@ describe('stats', () => {
   it('uses first attempts only', () => {
     const def = blockByKey.get('w1d1:A')!
     const s = empty()
-    s.blocks[def.key] = { round: 2, committed: true, startedAt: null, elapsedMs: 0, snapshot: null, roundElapsed: [60000, 30000] }
+    s.blocks[def.key] = { round: 2, committed: true, startedAt: null, elapsedMs: 0, snapshot: null, roundElapsed: [60000, 30000], committedAt: [1, 2] }
     s.attempts['W1D1-A1'] = [
       { round: 1, answer: 'x', confidence: 5, score: 0, errorCode: 'P' },
       { round: 2, answer: '79', confidence: 5, score: 3 },
