@@ -21,6 +21,8 @@ export interface Attempt {
   round: number
   answer: string
   confidence: number
+  /** Skip flag: excluded from Calibration; stays visible after Commit. */
+  skipped?: boolean
   /** Answer as it stood when a strict clock ran out (the `T` mark). */
   atTimeout?: string
   score: number | null
@@ -54,6 +56,7 @@ export interface SpanTry {
 export interface Draft {
   answer: string
   confidence: number
+  skipped?: boolean
 }
 
 export interface State {
@@ -93,6 +96,23 @@ export function setDraft(s: State, itemId: string, patch: Partial<Draft>): State
   return { ...s, drafts: { ...s.drafts, [itemId]: { ...cur, ...patch } } }
 }
 
+/** Toggle the Skip flag on an Item's draft. Never touches the answer. */
+export function toggleSkip(s: State, itemId: string): State {
+  const cur = s.drafts[itemId] ?? { answer: '', confidence: 0 }
+  return { ...s, drafts: { ...s.drafts, [itemId]: { ...cur, skipped: !cur.skipped } } }
+}
+
+/** An Item may be committed when flagged, or when it has an answer and a confidence. */
+export function itemReady(d: Draft | undefined): boolean {
+  if (!d) return false
+  return !!d.skipped || (d.answer.trim() !== '' && d.confidence > 0)
+}
+
+/** A flagged blank has nothing to score: it counts zero at Commit. Otherwise scored later. */
+export function skipScore(d: Draft | undefined): number | null {
+  return d?.skipped && d.answer.trim() === '' ? 0 : null
+}
+
 export function startClock(s: State, key: string, now: number): State {
   const b = blockState(s, key)
   if (b.startedAt !== null || b.committed) return s
@@ -129,7 +149,8 @@ export function commitBlock(s: State, key: string, itemIds: string[], now: numbe
         answer: d?.answer ?? '',
         confidence: d?.confidence ?? 0,
         atTimeout: b.snapshot ? b.snapshot[id] : undefined,
-        score: null,
+        skipped: d?.skipped || undefined,
+        score: skipScore(d),
       },
     ]
     delete drafts[id]

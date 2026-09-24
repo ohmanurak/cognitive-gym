@@ -3,10 +3,10 @@ import { Md } from '../components/Md'
 import { suggest } from '../lib/grade'
 import { blockStatus, latestAttempt } from '../lib/metrics'
 import { actions, blockState, elapsedNow, ERROR_CODES, useStore, type State } from '../lib/store'
+import { itemReady } from '../lib/state'
 import { blockByKey, blocks, freezeMin, itemById, type BlockDef } from '../lib/structure'
 import type { Item } from '../parser/parseWorkbook'
 
-const SKIPPED = '↷ skipped'
 
 function fmt(ms: number): string {
   const s = Math.floor(ms / 1000)
@@ -150,8 +150,8 @@ function ItemCard({ item, def, s }: { item: Item; def: BlockDef; s: State }) {
               ))}
             </span>
             <span className="grow" />
-            <button className="small" onClick={() => actions.setDraft(item.id, { answer: SKIPPED })}>
-              Skip
+            <button className={draft.skipped ? 'small on' : 'small'} onClick={() => actions.toggleSkip(item.id)}>
+              {draft.skipped ? 'Skipped (undo)' : 'Skip'}
             </button>
           </div>
         </div>
@@ -171,7 +171,7 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
   return (
     <div>
       <div className="small muted" style={{ marginTop: 8 }}>
-        Your answer (confidence {attempt.confidence}):
+        {attempt.skipped ? '↷ Skipped' : `Your answer (confidence ${attempt.confidence}):`}
       </div>
       <div style={{ whiteSpace: 'pre-wrap' }}>{attempt.answer}</div>
       {attempt.atTimeout !== undefined && attempt.atTimeout !== attempt.answer && (
@@ -255,8 +255,7 @@ export function BlockRunner({ blockKey }: { blockKey: string }) {
   const b = blockState(s, def.key)
   const items = def.itemIds.map((id) => itemById.get(id)!)
   const ready = items.every((it) => {
-    const d = s.drafts[it.id]
-    return d && d.answer.trim() !== '' && d.confidence > 0
+    return itemReady(s.drafts[it.id])
   })
   const status = blockStatus(s, def)
   const idx = blocks.findIndex((x) => x.key === def.key)
