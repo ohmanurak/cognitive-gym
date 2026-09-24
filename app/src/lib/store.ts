@@ -16,10 +16,20 @@ export type { Attempt, BlockState, Draft, ErrorCode, SpanTry, State } from './st
 /** Thin wrapper: browser storage, subscriptions and the real clock. All logic lives in `state.ts`. */
 const KEY = 'cognitive-gym:v1'
 
+/**
+ * True only when storage held nothing (key absent/blank) or storage is unavailable.
+ * A stored-but-unparseable value is NOT blank: load() falls back to an empty state for it,
+ * but startup restore must not treat that as "nothing to lose".
+ */
+export let storageWasBlank = true
+
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return { ...core.emptyState(), ...JSON.parse(raw) }
+    if (raw) {
+      storageWasBlank = false
+      return { ...core.emptyState(), ...JSON.parse(raw) }
+    }
   } catch {
     /* storage unavailable or corrupt: start empty */
   }
@@ -45,7 +55,7 @@ function commit(next: State) {
 export const getState = () => state
 
 /** Thin wiring for file autosave: real fetch, clock and timers. Logic lives in `autosave.ts`. */
-const autosaver = createAutosaver({
+export const autosaver = createAutosaver({
   fetch: (url, init) => fetch(url, init),
   now: () => Date.now(),
   setTimer: (fn, ms) => setTimeout(fn, ms),
