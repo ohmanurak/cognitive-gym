@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { BackupBanner } from './components/BackupBanner'
+import { requestPersistence } from './lib/backup'
 import { BlockRunner } from './pages/BlockRunner'
 import { Dashboard } from './pages/Dashboard'
 import { Data } from './pages/Data'
@@ -55,6 +57,7 @@ function Route({ hash }: { hash: string }) {
 
 export default function App() {
   const hash = useHash()
+  useEffect(requestPersistence, [])
   return (
     <div className="shell">
       <nav className="nav">
@@ -67,6 +70,7 @@ export default function App() {
           </a>
         ))}
       </nav>
+      <BackupBanner />
       <Route hash={hash} />
     </div>
   )

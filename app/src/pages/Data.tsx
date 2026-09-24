@@ -1,23 +1,23 @@
 import { useRef, useState } from 'react'
-import { actions } from '../lib/store'
+import { actions, useStore } from '../lib/store'
+import { currentFingerprint, downloadExport, orphansNow } from '../lib/backup'
+import { fingerprintMatches } from '../lib/integrity'
 
 export function Data() {
   const file = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState('')
-
-  function download() {
-    const blob = new Blob([actions.exportJson()], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `cognitive-gym-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
+  useStore()
+  const orphans = orphansNow()
 
   async function load(f: File) {
     try {
-      actions.importJson(await f.text())
-      setMsg('Imported. Existing progress was replaced.')
+      const text = await f.text()
+      actions.importJson(text)
+      const same = fingerprintMatches(JSON.parse(text).workbookFingerprint, currentFingerprint)
+      setMsg(
+        'Imported. Existing progress was replaced.' +
+          (same === false ? ' The workbook has changed since this export: unmatched attempts are listed below.' : ''),
+      )
     } catch (e) {
       setMsg(`Import failed: ${e instanceof Error ? e.message : String(e)}`)
     }
@@ -30,7 +30,7 @@ export function Data() {
         Progress lives in this browser only. Export a backup regularly, and use export/import to move to another device.
       </div>
       <div className="card row">
-        <button className="primary" onClick={download}>
+        <button className="primary" onClick={downloadExport}>
           Export JSON
         </button>
         <button onClick={() => file.current?.click()}>Import JSON…</button>
@@ -51,6 +51,34 @@ export function Data() {
         </button>
       </div>
       {msg && <div className="notice">{msg}</div>}
+      <div className="card">
+        <h2>Orphaned data</h2>
+        {orphans.count === 0 ? (
+          <div className="muted">None. Every saved attempt matches the current workbook.</div>
+        ) : (
+          <>
+            <div className="muted">
+              {orphans.attempts.length} attempts, {orphans.drafts.length} drafts, {orphans.blocks.length} blocks no
+              longer match the workbook. They are kept, never deleted.
+            </div>
+            <ul>
+              {orphans.attempts.map((a, i) => (
+                <li key={i}>
+                  {a.itemId} round {a.round}: {a.answer || '(blank)'}
+                </li>
+              ))}
+              {orphans.drafts.map((d) => (
+                <li key={d.itemId}>
+                  {d.itemId} draft: {d.answer || '(blank)'}
+                </li>
+              ))}
+              {orphans.blocks.map((k) => (
+                <li key={k}>Block {k}</li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </div>
   )
 }
