@@ -4,7 +4,8 @@ import type { LadderStep, SpanTestKind } from './spantest'
 import type { Attempt, Draft, SpanTry, State } from './state'
 import { markChanged } from './backupMeta'
 import { SCHEMA_VERSION, workbookFingerprint } from './integrity'
-import { workbook } from './structure'
+import { applyMerge, planMerge, type MergePlan } from './merge'
+import { blocks, workbook } from './structure'
 
 // Types and pure helpers stay importable from here so callers do not change.
 export { ERROR_CODES, blockState, elapsedNow, newBlockState } from './state'
@@ -86,6 +87,18 @@ export const actions = {
     const parsed = JSON.parse(text)
     if (parsed?.app !== 'cognitive-gym' || !parsed.state) throw new Error('Not a Cognitive Gym export')
     commit({ ...core.emptyState(), ...parsed.state })
+  },
+
+  /** Parse an export and plan a per-Block merge. Changes nothing. */
+  planImport(text: string): { incoming: State; plan: MergePlan } {
+    const parsed = JSON.parse(text)
+    if (parsed?.app !== 'cognitive-gym' || !parsed.state) throw new Error('Not a Cognitive Gym export')
+    const incoming: State = { ...core.emptyState(), ...parsed.state }
+    return { incoming, plan: planMerge(state, incoming, Object.fromEntries(blocks.map((b) => [b.key, b.itemIds]))) }
+  },
+
+  applyImport(incoming: State, plan: MergePlan) {
+    commit(applyMerge(state, incoming, plan))
   },
 
   reset() {

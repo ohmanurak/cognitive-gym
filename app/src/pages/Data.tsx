@@ -2,22 +2,28 @@ import { useRef, useState } from 'react'
 import { actions, useStore } from '../lib/store'
 import { currentFingerprint, downloadExport, orphansNow } from '../lib/backup'
 import { fingerprintMatches } from '../lib/integrity'
+import { ImportPreview } from '../components/ImportPreview'
+import type { MergePlan } from '../lib/merge'
+import type { State } from '../lib/state'
 
 export function Data() {
   const file = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState('')
+  const [pending, setPending] = useState<{ incoming: State; plan: MergePlan; warn: string } | null>(null)
   useStore()
   const orphans = orphansNow()
 
   async function load(f: File) {
     try {
       const text = await f.text()
-      actions.importJson(text)
+      const { incoming, plan } = actions.planImport(text)
       const same = fingerprintMatches(JSON.parse(text).workbookFingerprint, currentFingerprint)
-      setMsg(
-        'Imported. Existing progress was replaced.' +
-          (same === false ? ' The workbook has changed since this export: unmatched attempts are listed below.' : ''),
-      )
+      setMsg('')
+      setPending({
+        incoming,
+        plan,
+        warn: same === false ? ' The workbook has changed since this export: unmatched attempts are listed below.' : '',
+      })
     } catch (e) {
       setMsg(`Import failed: ${e instanceof Error ? e.message : String(e)}`)
     }
@@ -50,6 +56,17 @@ export function Data() {
           Reset all
         </button>
       </div>
+      {pending && (
+        <ImportPreview
+          plan={pending.plan}
+          onCancel={() => setPending(null)}
+          onConfirm={() => {
+            actions.applyImport(pending.incoming, pending.plan)
+            setMsg('Imported and merged per Block.' + pending.warn)
+            setPending(null)
+          }}
+        />
+      )}
       {msg && <div className="notice">{msg}</div>}
       <div className="card">
         <h2>Orphaned data</h2>
