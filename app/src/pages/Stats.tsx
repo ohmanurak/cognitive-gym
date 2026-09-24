@@ -32,6 +32,16 @@ function Trend({ points, label }: { points: (number | null)[]; label: string }) 
   )
 }
 
+function IndexCell({ v, n, prov }: { v: string; n: number; prov: boolean }) {
+  if (n === 0) return <>{v}</>
+  return (
+    <span style={prov ? { opacity: 0.55 } : undefined}>
+      {v}
+      <span className="small muted"> n={n}{prov ? ' provisional' : ''}</span>
+    </span>
+  )
+}
+
 export function Stats() {
   const s = useStore()
   const [pick, setPick] = useState(0)
@@ -65,11 +75,11 @@ export function Stats() {
             {rows.map((r, i) => (
               <tr key={r.label} onClick={() => setPick(i)} style={{ cursor: 'pointer', fontWeight: i === pick ? 700 : 400 }}>
                 <td>{r.label}</td>
-                <td className="num">{n1(r.st.PI)}</td>
-                <td className="num">{n1(r.st.AI)}</td>
+                <td className="num"><IndexCell v={n1(r.st.PI)} n={r.st.n.PI} prov={r.st.provisional.PI} /></td>
+                <td className="num"><IndexCell v={n1(r.st.AI)} n={r.st.n.AI} prov={r.st.provisional.AI} /></td>
                 <td className="num">{n1(r.st.WMI)}{r.st.WMIProvisional ? '*' : ''}</td>
-                <td className="num">{n1(r.st.HI)}</td>
-                <td className="num">{r.st.EI == null ? '·' : r.st.EI.toFixed(2)}</td>
+                <td className="num"><IndexCell v={n1(r.st.HI)} n={r.st.n.HI} prov={r.st.provisional.HI} /></td>
+                <td className="num"><IndexCell v={r.st.EI == null ? '·' : r.st.EI.toFixed(2)} n={r.st.n.EI} prov={r.st.provisional.EI} /></td>
                 <td className="num">{n1(r.st.accuracy)}</td>
                 <td>{r.st.dominantError ?? '·'}</td>
               </tr>
@@ -77,7 +87,7 @@ export function Stats() {
           </tbody>
         </table>
         <div className="small muted" style={{ marginTop: 8 }}>
-          Pattern uses PD items and block times. Abstraction and Hypothesis use your rubric self-scores as a share of available points. WM needs a reliable backward digit span from the trainer. Efficiency = correct Processing items per minute. Blank = no data yet.
+          Pattern uses PD items and block times. Abstraction and Hypothesis use your rubric self-scores as a share of available points. WM needs a reliable backward digit span from the trainer. Efficiency = correct Processing items per minute of their own per-Item time. Pattern speed counts only Blocks with a stated limit. Greyed values are provisional (Abstr./Hypoth. under 3 rubric Items, Pattern under 8, Efficiency under 5); n = Items counted. Blank = no data yet.
         </div>
       </div>
 

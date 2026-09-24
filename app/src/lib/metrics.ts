@@ -1,6 +1,6 @@
 import type { Item, Skill } from '../parser/parseWorkbook'
 import { dimsTotal, hasRubric } from './rubric'
-import { calibration, efficiency, patternIndex, rubricIndex } from './indices'
+import { calibration, efficiency, isProvisional, patternIndex, rubricIndex } from './indices'
 import { errorAnalysis, firstOpenMissBlock, stepUnits } from './erroranalysis'
 import { wmiFor } from './wmi'
 import { weekEnd, weekEndUnits } from './weekend'
@@ -98,6 +98,9 @@ export function scopeBlocks(scope: Scope): BlockDef[] {
   )
 }
 
+/** Block key for each Item id. */
+const blockOf = new Map<string, string>(blocks.flatMap((b) => b.itemIds.map((id) => [id, b.key] as const)))
+
 interface Scored {
   item: Item
   attempt: Attempt
@@ -172,6 +175,9 @@ export interface ScopeStats {
   WMIProvisional?: boolean
   HI: number | null
   EI: number | null
+  /** Items behind each Index, and whether that is under its threshold. */
+  n: { PI: number; AI: number; HI: number; EI: number }
+  provisional: { PI: boolean; AI: boolean; HI: boolean; EI: boolean }
   dominantError: ErrorCode | null
 }
 
@@ -181,6 +187,7 @@ export function scopeStats(s: State, scope: Scope): ScopeStats {
   const possible = skills.reduce((a, r) => a + r.possible, 0)
   const score = skills.reduce((a, r) => a + r.score, 0)
 
+  const pdN = scored.filter((r) => r.item.skill === 'PD').length
   const pd = skills.find((r) => r.skill === 'PD')!
   let PI: number | null = null
   if (pd.accuracy != null) {
@@ -188,20 +195,24 @@ export function scopeStats(s: State, scope: Scope): ScopeStats {
     PI = t.actual > 0 ? patternIndex(pd.accuracy, t.target, t.actual) : pd.accuracy * 0.7
   }
 
+  let aiN = 0
+  let hiN = 0
   const rubric = (skill: Skill) => {
     // Open Items with complete dimensions only; objective and undimensioned Items are ignored.
     const totals = scored
       .filter((r) => r.item.skill === skill && hasRubric(r.item))
       .map((r) => dimsTotal(r.attempt.dims))
       .filter((n): n is number => n != null)
+    if (skill === 'AB') aiN = totals.length
+    else hiN = totals.length
     return rubricIndex(totals)
   }
 
   const pe = scored.filter((r) => r.item.skill === 'PE')
-  const t = timing(s, scope, 'PE')
-  const EI = pe.length
-    ? efficiency(pe.filter((r) => r.attempt.score === r.item.points).length, t.actual)
-    : null
+  // Efficiency = correct Processing Items / summed per-Item time of those Items (first round).
+  const peMin =
+    pe.reduce((a, r) => a + (blockState(s, blockOf.get(r.item.id)!).roundItemMs?.[0]?.[r.item.id] ?? 0), 0) / 60000
+  const EI = pe.length ? efficiency(pe.filter((r) => r.attempt.score === r.item.points).length, peMin) : null
 
   const wmi = wmiFor(s, scope)
 
@@ -221,6 +232,13 @@ export function scopeStats(s: State, scope: Scope): ScopeStats {
     WMI: wmi?.WMI ?? null,
     WMIProvisional: wmi?.provisional,
     EI,
+    n: { PI: pdN, AI: aiN, HI: hiN, EI: pe.length },
+    provisional: {
+      PI: isProvisional('PI', pdN),
+      AI: isProvisional('AI', aiN),
+      HI: isProvisional('HI', hiN),
+      EI: isProvisional('EI', pe.length),
+    },
     dominantError,
   }
 }
