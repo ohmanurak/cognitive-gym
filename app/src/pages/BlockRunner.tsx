@@ -1,6 +1,7 @@
 import { weakFixHint } from '../lib/erroranalysis'
 import { useEffect, useState } from 'react'
 import { Md } from '../components/Md'
+import { MultiStepToggle } from '../components/MultiStepToggle'
 import { RubricDims } from '../components/RubricDims'
 import { hasRubric } from '../lib/rubric'
 import { hintText, storedSuggestion, suggestionFor } from '../lib/grade'
@@ -214,6 +215,7 @@ function Review({ item, attempt }: { item: Item; attempt: NonNullable<ReturnType
       </div>
 
       {hasRubric(item) && <RubricDims item={item} attempt={attempt} />}
+      <MultiStepToggle item={item} attempt={attempt} />
 
       <div className="row" style={{ marginTop: 10 }}>
         <span className="small muted">

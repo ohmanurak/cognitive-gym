@@ -26,6 +26,8 @@ export interface Attempt {
   confidence: number
   /** Skip flag: excluded from Calibration; stays visible after Commit. */
   skipped?: boolean
+  /** Review toggle (WM Items): needed four or more dependent steps. Unset = workbook tag. */
+  multiStep?: boolean
   /** Answer as it stood when a strict clock ran out (the `T` mark). */
   atTimeout?: string
   score: number | null
