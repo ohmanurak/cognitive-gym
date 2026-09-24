@@ -1,0 +1,99 @@
+import { blockStatus, nextUp, progressOf } from '../lib/metrics'
+import { actions, useStore } from '../lib/store'
+import { blocks, dayMeta, weekMeta } from '../lib/structure'
+
+export function Plan() {
+  const s = useStore()
+  const groups = [
+    { title: 'Baseline assessment', defs: blocks.filter((b) => b.stage === 'baseline') },
+    ...Array.from({ length: 12 }, (_, i) => ({
+      title: `Week ${i + 1} · ${weekMeta(i + 1)?.title}`,
+      defs: blocks.filter((b) => b.week === i + 1),
+    })),
+    { title: 'Final Examination', defs: blocks.filter((b) => b.stage === 'final') },
+  ]
+  const next = nextUp(s)
+  return (
+    <div>
+      <h1>Plan</h1>
+      <div className="muted">Every block in workbook order. Free access; skipping ahead is your call.</div>
+      {groups.map((g) => (
+        <div key={g.title}>
+          <h2>{g.title}</h2>
+          <div className="card">
+            <table>
+              <tbody>
+                {g.defs.map((d) => {
+                  const st = blockStatus(s, d)
+                  const dm = d.week && d.day ? dayMeta(d.week, d.day) : undefined
+                  return (
+                    <tr key={d.key}>
+                      <td style={{ width: 130 }}>
+                        <a href={`#/block/${d.key}`}>{d.label}</a>
+                      </td>
+                      <td>
+                        {d.title}
+                        {dm && <span className="muted small"> · {dm.title}</span>}
+                        {next?.key === d.key && <span className="pill"> next up</span>}
+                      </td>
+                      <td className="num small muted">{d.itemIds.length} items</td>
+                      <td className="num">
+                        <span className={`pill ${st}`}>{st}</span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function WeekPage({ week }: { week: number }) {
+  const s = useStore()
+  const meta = weekMeta(week)
+  if (!meta) return <p>Unknown week.</p>
+  const defs = blocks.filter((b) => b.week === week)
+  const days = [...new Set(defs.map((d) => d.day!))]
+  const p = progressOf(s, defs)
+  const rid = `week${week}`
+  return (
+    <div>
+      <h1>
+        Week {week} · {meta.title}
+      </h1>
+      <div className="muted">
+        {meta.phase} phase · {p.itemsDone}/{p.itemsTotal} items done
+      </div>
+      {days.map((d) => (
+        <div className="card" key={d}>
+          <b>
+            Day {d} · {dayMeta(week, d)?.title}
+          </b>
+          <div className="row" style={{ marginTop: 6 }}>
+            {defs
+              .filter((x) => x.day === d)
+              .map((x) => (
+                <a key={x.key} className="btn" href={`#/block/${x.key}`}>
+                  {x.label.split('·')[1]?.trim()} <span className={`pill ${blockStatus(s, x)}`}>{blockStatus(s, x)}</span>
+                </a>
+              ))}
+          </div>
+        </div>
+      ))}
+      <h2>Weekly reflection</h2>
+      <textarea
+        placeholder="What improved? Which error code led? What will you change?"
+        value={s.reflections[rid] ?? ''}
+        onChange={(e) => actions.setReflection(rid, e.target.value)}
+        style={{ minHeight: 120 }}
+      />
+      <p>
+        <a href="#/stats">See scorecard and indices</a>
+      </p>
+    </div>
+  )
+}
