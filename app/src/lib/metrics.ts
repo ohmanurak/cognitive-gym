@@ -7,7 +7,7 @@ import { weekEnd, weekEndUnits } from './weekend'
 import { stageEnd } from './stageend'
 import { baselineSpanDone } from './spantest'
 import { blocks, itemById, type BlockDef } from './structure'
-import { blockState, type Attempt, type ErrorCode, type SpanTry, type State } from './store'
+import { blockState, type Attempt, type ErrorCode, type SpanTry, type State } from './state'
 
 export type Status = 'todo' | 'in-progress' | 'committed' | 'done'
 

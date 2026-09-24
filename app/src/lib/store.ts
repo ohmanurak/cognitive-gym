@@ -2,9 +2,11 @@ import { useSyncExternalStore } from 'react'
 import * as core from './state'
 import type { LadderStep, SpanTestKind } from './spantest'
 import type { Attempt, Draft, SpanTry, State } from './state'
+import { createAutosaver, type AutosaveStatus } from './autosave'
 import { markChanged } from './backupMeta'
 import { SCHEMA_VERSION, workbookFingerprint } from './integrity'
 import { applyMerge, planMerge, type MergePlan } from './merge'
+import { saveMilestones } from './saveTriggers'
 import { blocks, workbook } from './structure'
 
 // Types and pure helpers stay importable from here so callers do not change.
@@ -37,9 +39,31 @@ function commit(next: State) {
   }
   markChanged()
   listeners.forEach((l) => l())
+  autosaver.notify()
 }
 
 export const getState = () => state
+
+/** Thin wiring for file autosave: real fetch, clock and timers. Logic lives in `autosave.ts`. */
+const autosaver = createAutosaver({
+  fetch: (url, init) => fetch(url, init),
+  now: () => Date.now(),
+  setTimer: (fn, ms) => setTimeout(fn, ms),
+  clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+  milestones: () => saveMilestones(state),
+  body: () => actions.exportJson(),
+})
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') autosaver.flush()
+  })
+  window.addEventListener('pagehide', () => autosaver.flush())
+}
+
+export function useAutosaveStatus(): AutosaveStatus {
+  return useSyncExternalStore(autosaver.subscribe, autosaver.getStatus)
+}
 
 export function useStore(): State {
   return useSyncExternalStore(
