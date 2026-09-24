@@ -275,7 +275,7 @@ export function BlockRunner({ blockKey }: { blockKey: string }) {
 
       {spanBlock && (
         <div className="notice">
-          Digit-span tasks (Baseline 2A/2B) are in the <a href="#/span">Digit span trainer</a>. The items below are 2C.
+          Digit-span tasks (Baseline 2A/2B) are in the <a href="#/block/base:2span">Span test</a> (practice in <a href="#/span">Span practice</a>). The items below are 2C.
         </div>
       )}
 

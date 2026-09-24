@@ -61,9 +61,9 @@ export function Span() {
 
   return (
     <div>
-      <h1>Digit span trainer</h1>
+      <h1>Span practice</h1>
       <div className="muted">
-        Workbook Baseline 2A/2B. Digits appear one at a time. A length counts as reliable when your last two tries at it are both right. The backward span feeds the Working-Memory Index.
+        Uncounted practice with random sequences and immediate feedback. The counted <a href="#/block/base:2span">Span test</a> is separate. Digits appear one at a time. A length counts as reliable when your last two tries at it are both right.
       </div>
 
       <div className="card">

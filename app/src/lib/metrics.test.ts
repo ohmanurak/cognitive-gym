@@ -3,7 +3,7 @@ import { blockStatus, longestReliableSpan, nextUp, progressOf, scopeStats } from
 import type { State } from './store'
 import { blockByKey, blocks } from './structure'
 
-const empty = (): State => ({ attempts: {}, drafts: {}, blocks: {}, spans: [], reflections: {} })
+const empty = (): State => ({ attempts: {}, drafts: {}, blocks: {}, spans: [], spanTests: [], reflections: {} })
 
 describe('structure', () => {
   it('orders baseline, 12 weeks, then the final exam', () => {

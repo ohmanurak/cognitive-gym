@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import * as core from './state'
+import type { LadderStep, SpanTestKind } from './spantest'
 import type { Attempt, Draft, SpanTry, State } from './state'
 
 // Types and pure helpers stay importable from here so callers do not change.
@@ -52,6 +53,16 @@ export const actions = {
   mark: (itemId: string, patch: Partial<Attempt>) => commit(core.mark(state, itemId, patch)),
   retryBlock: (key: string) => commit(core.retryBlock(state, key)),
   addSpan: (t: SpanTry) => commit(core.addSpan(state, t)),
+  startSpanTest: (kind: SpanTestKind) => {
+    const id = `span-${Date.now()}`
+    commit(core.startSpanTest(state, id, kind, Date.now()))
+    return id
+  },
+  addSpanTrial: (id: string, step: LadderStep, response: string) => commit(core.addSpanTrial(state, id, step, response, Date.now())),
+  abandonSpanTests: () => {
+    const next = core.abandonSpanTests(state)
+    if (next !== state) commit(next)
+  },
   setReflection: (id: string, text: string) => commit(core.setReflection(state, id, text)),
 
   exportJson(): string {
