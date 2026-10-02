@@ -132,6 +132,16 @@ export function addCoachingLinks(s: State, key: string, links: CoachingNote['lin
   return setCoachingNote(s, key, { ...note, links, usage: sum })
 }
 
+/** Use as Fix: copy a coaching strategy into the first-attempt Fix of each selected miss. */
+export function adoptFix(s: State, itemIds: string[], fix: string): State {
+  const attempts = { ...s.attempts }
+  for (const id of itemIds) {
+    const list = attempts[id]
+    if (list) attempts[id] = list.map((a) => (a.round === 1 ? { ...a, fix } : a))
+  }
+  return { ...s, attempts }
+}
+
 export const newBlockState = (): BlockState => ({
   round: 1,
   committed: false,

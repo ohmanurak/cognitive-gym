@@ -113,3 +113,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .coach-note .pre { white-space: pre-line; margin: 0; }
 .spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* Coach this miss, Use as Fix (#54) */
+.coach button.link { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
+.coach button.link:disabled { color: var(--muted); cursor: default; }
+.use-as-fix { border: 1px solid var(--line); border-radius: 6px; margin: 6px 0; padding: 8px; }
+.use-as-fix textarea { width: 100%; box-sizing: border-box; margin-bottom: 4px; }

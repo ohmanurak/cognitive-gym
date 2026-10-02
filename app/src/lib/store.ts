@@ -122,6 +122,7 @@ export const actions = {
     const next = core.addCoachingLinks(state, key, links, usage)
     if (next !== state) commit(next)
   },
+  adoptFix: (itemIds: string[], fix: string) => commit(core.adoptFix(state, itemIds, fix)),
 
   exportJson(): string {
     return JSON.stringify(

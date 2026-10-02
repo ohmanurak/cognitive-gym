@@ -54,7 +54,7 @@ function progressFile(): Plugin {
 }
 
 /**
- * Coach me: GET /api/coach/health, POST /api/coach/diagnose, POST /api/coach/links. Only active under `npm run dev`.
+ * Coach me: GET /api/coach/health, POST /api/coach/diagnose, POST /api/coach/diagnose-miss, POST /api/coach/links. Only active under `npm run dev`.
  * The key is read server-side from ANTHROPIC_API_KEY (app/.env.local) and never reaches the bundle.
  */
 function coachApi(): Plugin {

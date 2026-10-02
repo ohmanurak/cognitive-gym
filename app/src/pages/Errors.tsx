@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CoachPanel } from '../components/CoachPanel'
+import { CoachPanel, MissCoachPanel } from '../components/CoachPanel'
 import { FocusCard } from '../components/FocusCard'
 import { weakFixHint } from '../lib/erroranalysis'
 import { rankFocus } from '../lib/focus'
@@ -43,7 +43,7 @@ export function Errors() {
       {rows.map(({ id, a }, i) => {
         const def = blockOfItem(id)
         return (
-          <div className="card" key={`${id}-${i}`}>
+          <div className="card" key={`${id}-${i}`} role="group" aria-label={`Miss ${id}`}>
             <div className="row">
               <a href={def ? `#/block/${def.key}` : '#/'} className="item-id">
                 {id}
@@ -59,6 +59,7 @@ export function Errors() {
                 {weakFixHint(a.fix) && <div className="muted small">{weakFixHint(a.fix)}</div>}
               </div>
             ) : <div className="muted small">No fix written yet.</div>}
+            {a.round === 1 && <MissCoachPanel itemId={id} />}
           </div>
         )
       })}
@@ -70,6 +71,8 @@ function WhatToWorkOn({ onPick }: { onPick: (code: ErrorCode) => void }) {
   const s = useStore()
   const { focus, provisional, uncoded } = rankFocus(s)
   const top = focus.slice(0, 3)
+  /** Ranked groups outside the top 3 that still have a note: reachable from the collapsed line. */
+  const rest = focus.slice(3).filter((f) => s.coachingNotes?.[`focus:${f.code}`])
   return (
     <section aria-labelledby="focus-heading">
       <h2 id="focus-heading">What to work on</h2>
@@ -84,9 +87,19 @@ function WhatToWorkOn({ onPick }: { onPick: (code: ErrorCode) => void }) {
           <CoachPanel focus={f} />
         </FocusCard>
       ))}
-      {provisional.length > 0 && (
+      {(provisional.length > 0 || rest.length > 0) && (
         <details className="small muted">
-          <summary>Provisional: {provisional.map((f) => f.code).join(', ')} (needs 3+ misses to rank)</summary>
+          <summary>
+            {provisional.length > 0 && `Provisional: ${provisional.map((f) => f.code).join(', ')} (needs 3+ misses to rank)`}
+            {provisional.length > 0 && rest.length > 0 && ' · '}
+            {rest.length > 0 && `Notes outside the top 3: ${rest.map((f) => f.code).join(', ')}`}
+          </summary>
+          {rest.map((f) => (
+            <div key={f.code}>
+              {f.code} · {f.name}: {f.misses} misses, {f.pointsLost} points lost
+              <CoachPanel focus={f} />
+            </div>
+          ))}
           {provisional.map((f) => (
             <div key={f.code}>
               {f.code} · {f.name}: {f.misses} {f.misses === 1 ? 'miss' : 'misses'}, {f.pointsLost} points lost
