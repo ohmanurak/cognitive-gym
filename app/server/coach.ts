@@ -71,7 +71,7 @@ export function capFromEnv(env: Record<string, string | undefined>): number {
 }
 
 /** Calendar month in local time, e.g. "2026-10". */
-const month = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+export const month = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 
 export const SPEND_FILE = 'coach-spend.json'
 
@@ -98,7 +98,7 @@ export function createSpendStore(dir: string): SpendStore {
   }
 }
 
-const costOf = (u: Anthropic.Usage) =>
+export const costOf = (u: Anthropic.Usage) =>
   (u.input_tokens + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)) * PRICE.input +
   u.output_tokens * PRICE.output +
   (u.server_tool_use?.web_search_requests ?? 0) * PRICE.search
@@ -111,7 +111,7 @@ export function createCoachClient(apiKey: string): Anthropic {
 }
 
 /** Guardrails table (#49): every API failure mapped to the message shown inline. */
-function mapError(e: unknown): { status: number; error: string; detail?: string } {
+export function mapError(e: unknown): { status: number; error: string; detail?: string } {
   if (e instanceof Anthropic.APIConnectionError) return { status: 502, error: "Couldn't reach Claude" }
   if (e instanceof Anthropic.AuthenticationError) return { status: 401, error: NO_KEY }
   if (e instanceof Anthropic.RateLimitError) {

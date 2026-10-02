@@ -118,6 +118,20 @@ export function setCoachingNote(s: State, key: string, note: CoachingNote): Stat
   return { ...s, coachingNotes: { ...s.coachingNotes, [key]: note } }
 }
 
+/** Add found study links to a saved note: replaces `links`, adds the search cost to `usage`. Diagnosis untouched. */
+export function addCoachingLinks(s: State, key: string, links: CoachingNote['links'], usage: CoachingNote['usage']): State {
+  const note = s.coachingNotes[key]
+  if (!note) return s
+  const u = note.usage
+  const sum = {
+    inputTokens: u.inputTokens + usage.inputTokens,
+    outputTokens: u.outputTokens + usage.outputTokens,
+    searches: u.searches + usage.searches,
+    costUsd: u.costUsd + usage.costUsd,
+  }
+  return setCoachingNote(s, key, { ...note, links, usage: sum })
+}
+
 export const newBlockState = (): BlockState => ({
   round: 1,
   committed: false,

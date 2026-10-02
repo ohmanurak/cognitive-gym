@@ -118,6 +118,10 @@ export const actions = {
   setWeekAnswer: (week: number, index: number, text: string) => commit(core.setWeekAnswer(state, week, index, text)),
   setReflection: (id: string, text: string) => commit(core.setReflection(state, id, text)),
   setCoachingNote: (key: string, note: CoachingNote) => commit(core.setCoachingNote(state, key, note)),
+  addCoachingLinks: (key: string, links: CoachingNote['links'], usage: CoachingNote['usage']) => {
+    const next = core.addCoachingLinks(state, key, links, usage)
+    if (next !== state) commit(next)
+  },
 
   exportJson(): string {
     return JSON.stringify(
