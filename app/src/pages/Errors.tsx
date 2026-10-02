@@ -1,5 +1,7 @@
-import { weakFixHint } from '../lib/erroranalysis'
 import { useState } from 'react'
+import { FocusCard } from '../components/FocusCard'
+import { weakFixHint } from '../lib/erroranalysis'
+import { rankFocus } from '../lib/focus'
 import { ERROR_CODES, useStore, type ErrorCode } from '../lib/store'
 import { blockOfItem, itemById } from '../lib/structure'
 
@@ -23,6 +25,7 @@ export function Errors() {
     <div>
       <h1>Error log</h1>
       <div className="muted">Every wrong answer gets one code and a strategy fix, not "be careful".</div>
+      <WhatToWorkOn onPick={setFilter} />
       <div className="card row">
         {counts.map((c) => (
           <button
@@ -59,5 +62,36 @@ export function Errors() {
         )
       })}
     </div>
+  )
+}
+
+function WhatToWorkOn({ onPick }: { onPick: (code: ErrorCode) => void }) {
+  const s = useStore()
+  const { focus, provisional, uncoded } = rankFocus(s)
+  const top = focus.slice(0, 3)
+  return (
+    <section aria-labelledby="focus-heading">
+      <h2 id="focus-heading">What to work on</h2>
+      {top.length === 0 && provisional.length === 0 && (
+        <p className="muted">No coded misses yet. Give each miss an Error code to see what to work on.</p>
+      )}
+      {top.length === 0 && provisional.length > 0 && (
+        <p className="muted">Nothing ranks yet: each code needs 3+ misses to rank.</p>
+      )}
+      {top.map((f) => (
+        <FocusCard key={f.code} focus={f} max={top[0].score} onPick={() => onPick(f.code)} />
+      ))}
+      {provisional.length > 0 && (
+        <details className="small muted">
+          <summary>Provisional: {provisional.map((f) => f.code).join(', ')} (needs 3+ misses to rank)</summary>
+          {provisional.map((f) => (
+            <div key={f.code}>
+              {f.code} · {f.name}: {f.misses} {f.misses === 1 ? 'miss' : 'misses'}, {f.pointsLost} points lost
+            </div>
+          ))}
+        </details>
+      )}
+      {uncoded > 0 && <div className="small muted">{uncoded} {uncoded === 1 ? 'miss' : 'misses'} still uncoded</div>}
+    </section>
   )
 }
