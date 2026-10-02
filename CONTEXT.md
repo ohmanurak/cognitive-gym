@@ -156,6 +156,18 @@ _Avoid_: Mistake journal
 A concrete strategy sentence in the Error log; "be more careful" does not qualify.
 _Avoid_: Lesson learned
 
+**Error profile**:
+The aggregate reading of the Error log across Days and Weeks that ranks where the learner's errors concentrate. Distinct from Error analysis, which codes individual misses.
+_Avoid_: Error analysis, weakness report
+
+**Focus**:
+One prioritised thing to work on, produced by the Error profile, with the evidence behind it.
+_Avoid_: Recommendation, weakness
+
+**Coaching note**:
+Claude's saved diagnosis of one Focus or one miss, with a strategy and links to study material found by live search. Kept in progress, dated, never generated automatically.
+_Avoid_: AI feedback, tutor reply
+
 **Scorecard**:
 The end-of-Week table of score, accuracy, time, and main error per Skill.
 _Avoid_: Report card
