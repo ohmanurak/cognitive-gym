@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyMerge, planMerge } from './merge'
-import { emptyState, newBlockState, type Attempt, type State } from './state'
+import { emptyState, newBlockState, type Attempt, type CoachingNote, type State } from './state'
 
 const items = { A: ['a1', 'a2'], B: ['b1'] }
 const att = (answer: string): Attempt => ({ round: 1, answer, confidence: 3, score: 1 })
@@ -72,6 +72,34 @@ describe('per-Block merge', () => {
     expect(m.blocks.ZZ).toBeDefined()
     expect(m.attempts.zz1).toBeDefined()
     expect(m.attempts.a9[0].answer).toBe('orphan')
+  })
+  it('unions Coaching notes by key; on a clash the newer createdAt wins', () => {
+    const note = (createdAt: string, diagnosis: string): CoachingNote => ({
+      createdAt,
+      model: 'claude-sonnet-5-5',
+      basedOn: [],
+      sections: { diagnosis, strategies: [], practice: [], searchTopic: '' },
+      links: [],
+      usage: { inputTokens: 1, outputTokens: 1, searches: 0, costUsd: 0.01 },
+    })
+    const l = st({ coachingNotes: { 'focus:K': note('2026-10-02T00:00:00Z', 'local K'), 'focus:R': note('2026-10-05T00:00:00Z', 'local R') } })
+    const i = st({ coachingNotes: { 'focus:K': note('2026-10-03T00:00:00Z', 'incoming K'), 'focus:R': note('2026-10-01T00:00:00Z', 'old R'), 'focus:H': note('2026-10-01T00:00:00Z', 'H') } })
+    const m = merge(l, i)
+    expect(Object.fromEntries(Object.entries(m.coachingNotes).map(([k, n]) => [k, n.sections.diagnosis]))).toEqual({
+      'focus:K': 'incoming K',
+      'focus:R': 'local R',
+      'focus:H': 'H',
+    })
+  })
+  it('a missing coachingNotes on either side is treated as {}', () => {
+    const n = { createdAt: '2026-10-02T00:00:00Z' } as CoachingNote
+    const noNotes = (s: State) => {
+      const { coachingNotes: _drop, ...rest } = s
+      return rest as State
+    }
+    expect(merge(noNotes(st({})), st({ coachingNotes: { 'focus:K': n } })).coachingNotes).toEqual({ 'focus:K': n })
+    expect(merge(st({ coachingNotes: { 'focus:K': n } }), noNotes(st({}))).coachingNotes).toEqual({ 'focus:K': n })
+    expect(merge(noNotes(st({})), noNotes(st({}))).coachingNotes).toEqual({})
   })
   it('cancel = no change (plan alone does not touch state)', () => {
     const l = st({ blocks: { A: done(1) } })

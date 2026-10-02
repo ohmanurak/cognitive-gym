@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import * as core from './state'
 import type { LadderStep, SpanTestKind } from './spantest'
-import type { Attempt, Draft, SpanTry, State } from './state'
+import type { Attempt, CoachingNote, Draft, SpanTry, State } from './state'
 import { createAutosaver, type AutosaveStatus } from './autosave'
 import { markChanged } from './backupMeta'
 import { SCHEMA_VERSION, workbookFingerprint } from './integrity'
@@ -11,7 +11,7 @@ import { blocks, workbook } from './structure'
 
 // Types and pure helpers stay importable from here so callers do not change.
 export { ERROR_CODES, blockState, elapsedNow, newBlockState } from './state'
-export type { Attempt, BlockState, Draft, ErrorCode, SpanTry, State } from './state'
+export type { Attempt, BlockState, CoachingNote, Draft, ErrorCode, SpanTry, State } from './state'
 
 /** Thin wrapper: browser storage, subscriptions and the real clock. All logic lives in `state.ts`. */
 const KEY = 'cognitive-gym:v1'
@@ -117,6 +117,7 @@ export const actions = {
   },
   setWeekAnswer: (week: number, index: number, text: string) => commit(core.setWeekAnswer(state, week, index, text)),
   setReflection: (id: string, text: string) => commit(core.setReflection(state, id, text)),
+  setCoachingNote: (key: string, note: CoachingNote) => commit(core.setCoachingNote(state, key, note)),
 
   exportJson(): string {
     return JSON.stringify(

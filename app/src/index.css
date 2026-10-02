@@ -104,3 +104,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .focus-card { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .focus-card .bar { margin-top: 6px; }
 .pill.warn { color: var(--warn); border-color: var(--warn); }
+/* Coach me (CoachPanel) */
+.focus-card-wrap .focus-card { margin-bottom: 4px; }
+.coach { margin: 4px 0 10px; }
+.coach .warn { color: var(--warn); }
+.coach-note summary { cursor: pointer; }
+.coach-note h4 { margin: 8px 0 2px; }
+.coach-note .pre { white-space: pre-line; margin: 0; }
+.spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px; }
+@keyframes spin { to { transform: rotate(360deg); } }

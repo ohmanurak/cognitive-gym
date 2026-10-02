@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CoachPanel } from '../components/CoachPanel'
 import { FocusCard } from '../components/FocusCard'
 import { weakFixHint } from '../lib/erroranalysis'
 import { rankFocus } from '../lib/focus'
@@ -79,7 +80,9 @@ function WhatToWorkOn({ onPick }: { onPick: (code: ErrorCode) => void }) {
         <p className="muted">Nothing ranks yet: each code needs 3+ misses to rank.</p>
       )}
       {top.map((f) => (
-        <FocusCard key={f.code} focus={f} max={top[0].score} onPick={() => onPick(f.code)} />
+        <FocusCard key={f.code} focus={f} max={top[0].score} onPick={() => onPick(f.code)}>
+          <CoachPanel focus={f} />
+        </FocusCard>
       ))}
       {provisional.length > 0 && (
         <details className="small muted">
@@ -87,6 +90,7 @@ function WhatToWorkOn({ onPick }: { onPick: (code: ErrorCode) => void }) {
           {provisional.map((f) => (
             <div key={f.code}>
               {f.code} · {f.name}: {f.misses} {f.misses === 1 ? 'miss' : 'misses'}, {f.pointsLost} points lost
+              <CoachPanel focus={f} />
             </div>
           ))}
         </details>

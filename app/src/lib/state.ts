@@ -86,9 +86,37 @@ export interface State {
   reflections: Record<string, string>
   /** Weekly reflection answers per Week, one per workbook question (see weekend.ts). */
   weekReflections: Record<number, string[]>
+  /** Coaching notes keyed `focus:<ErrorCode>` (or `miss:<itemId>`). */
+  coachingNotes: Record<string, CoachingNote>
 }
 
-export const emptyState = (): State => ({ attempts: {}, drafts: {}, blocks: {}, spans: [], spanTests: [], reflections: {}, weekReflections: {} })
+/** Claude's saved diagnosis of one Focus or one miss. The request payload is not stored. */
+export interface CoachingNote {
+  /** ISO timestamp. */
+  createdAt: string
+  model: string
+  /** The misses the note was built from, with their week. */
+  basedOn: { id: string; week: number }[]
+  sections: { diagnosis: string; strategies: string[]; practice: string[]; searchTopic: string }
+  links: { url: string; title: string; source: 'youtube' | 'blog'; reason: string; verified: boolean }[]
+  usage: { inputTokens: number; outputTokens: number; searches: number; costUsd: number }
+}
+
+export const emptyState = (): State => ({
+  attempts: {},
+  drafts: {},
+  blocks: {},
+  spans: [],
+  spanTests: [],
+  reflections: {},
+  weekReflections: {},
+  coachingNotes: {},
+})
+
+/** Save (or replace) a Coaching note. */
+export function setCoachingNote(s: State, key: string, note: CoachingNote): State {
+  return { ...s, coachingNotes: { ...s.coachingNotes, [key]: note } }
+}
 
 export const newBlockState = (): BlockState => ({
   round: 1,
