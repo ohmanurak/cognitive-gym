@@ -4,7 +4,6 @@ import { requestDiagnosis, useCoach } from '../lib/coachClient'
 import type { Focus } from '../lib/focus'
 import type { CoachingNote } from '../lib/state'
 import { actions, getState, useStore } from '../lib/store'
-import { StudyLinks } from './StudyLinks'
 
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 
@@ -72,7 +71,7 @@ export function CoachPanel({ focus }: { focus: Focus }) {
           )}
         </div>
       )}
-      {note && <CoachingNoteView note={note} noteKey={key} fixTargets={focus.itemIds} />}
+      {note && <CoachingNoteView note={note} fixTargets={focus.itemIds} />}
     </div>
   )
 }
@@ -120,7 +119,7 @@ export function MissCoachPanel({ itemId }: { itemId: string }) {
           {error}
         </div>
       )}
-      {note && <CoachingNoteView note={note} noteKey={key} fixTargets={[itemId]} />}
+      {note && <CoachingNoteView note={note} fixTargets={[itemId]} />}
     </div>
   )
 }
@@ -170,9 +169,9 @@ function UseAsFix({ strategy, itemIds, onDone }: { strategy: string; itemIds: st
   )
 }
 
-/** `noteKey` (optional) enables Find study links inside the note; `fixTargets` enables Use as Fix. */
-function CoachingNoteView({ note, noteKey, fixTargets }: { note: CoachingNote; noteKey?: string; fixTargets?: string[] }) {
-  const { diagnosis, strategies, practice } = note.sections
+/** `fixTargets` (optional) enables Use as Fix. */
+function CoachingNoteView({ note, fixTargets }: { note: CoachingNote; fixTargets?: string[] }) {
+  const { diagnosis, strategies, practice, studyTopics = [] } = note.sections
   const [adopting, setAdopting] = useState<number | null>(null)
   const [first] = diagnosis.split('\n')
   return (
@@ -205,7 +204,16 @@ function CoachingNoteView({ note, noteKey, fixTargets }: { note: CoachingNote; n
           <li key={i}>{s}</li>
         ))}
       </ul>
-      {noteKey && <StudyLinks noteKey={noteKey} note={note} />}
+      {studyTopics.length > 0 && (
+        <>
+          <h4>Study topics</h4>
+          <ul>
+            {studyTopics.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ul>
+        </>
+      )}
       <div className="small muted">Cost ${note.usage.costUsd.toFixed(3)}</div>
     </details>
   )

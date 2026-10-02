@@ -28,14 +28,14 @@ const SECTIONS = {
   diagnosis: 'Your Answer took the first branch; the Key splits on the base rate first. You fell into the trap.',
   strategies: ['Write the base rate down before reading the evidence.'],
   practice: ['Redo W1D1-B2 from the base rate.'],
-  searchTopic: 'base rate neglect',
+  studyTopics: ['base rate neglect'],
 }
 const message = (p: Partial<Anthropic.Message> = {}): Anthropic.Message =>
   ({
     id: 'msg_1',
     type: 'message',
     role: 'assistant',
-    model: 'claude-sonnet-5-5',
+    model: 'claude-haiku-4-5',
     content: [{ type: 'text', text: JSON.stringify(SECTIONS), citations: null }],
     stop_reason: 'end_turn',
     stop_sequence: null,
@@ -64,7 +64,7 @@ describe('POST /diagnose-miss (per-miss note)', () => {
     const r = await diagnoseMiss(d)
     expect(calls).toHaveLength(1)
     const p = calls[0]
-    expect(p).toMatchObject({ model: 'claude-sonnet-5-5', output_config: { effort: 'low', format: { type: 'json_schema' } } })
+    expect(p).toMatchObject({ model: 'claude-haiku-4-5', output_config: { format: { type: 'json_schema' } } })
     expect(p.system).not.toBe(SYSTEM_PROMPT)
     expect(p.system).toMatch(/diverged from the Key's derivation/)
     expect(p.system).toMatch(/trap/)
@@ -72,16 +72,15 @@ describe('POST /diagnose-miss (per-miss note)', () => {
     const sent = JSON.stringify(p.messages)
     expect(sent).toContain('W1D1-B2')
     expect(sent).toContain('ignoring the base rate')
-    const cost = 1000 * 2e-6 + 300 * 10e-6
+    const cost = 1000 * 1e-6 + 300 * 5e-6
     expect(r.status).toBe(200)
     expect(r.body).toEqual({
       note: {
         createdAt: NOW.toISOString(),
-        model: 'claude-sonnet-5-5',
+        model: 'claude-haiku-4-5',
         basedOn: [{ id: 'W1D1-B2', week: 1 }],
         sections: SECTIONS,
-        links: [],
-        usage: { inputTokens: 1000, outputTokens: 300, searches: 0, costUsd: cost },
+        usage: { inputTokens: 1000, outputTokens: 300, costUsd: cost },
       },
       remainingUsd: 5 - cost,
     })

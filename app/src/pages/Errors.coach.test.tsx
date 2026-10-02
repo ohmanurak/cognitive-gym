@@ -29,10 +29,9 @@ const NOTE: CoachingNote = {
     diagnosis: 'You read "confounder" as any third variable.\nIn B3-03 you assumed X.',
     strategies: ['Write the definition before you answer.'],
     practice: ['Redo B3-03 from the definition.'],
-    searchTopic: 'confounding variable',
+    studyTopics: ['confounding variable'],
   },
-  links: [],
-  usage: { inputTokens: 2129, outputTokens: 802, searches: 0, costUsd: 0.0123 },
+  usage: { inputTokens: 2129, outputTokens: 802, costUsd: 0.0123 },
 }
 
 const json = (status: number, body: unknown) =>
@@ -127,12 +126,14 @@ describe('Error log: Coach me', () => {
     expect(getState().coachingNotes['focus:K']).toBeUndefined()
   })
 
-  it('expanded, the note shows Diagnosis, Strategy, Practice and its cost', async () => {
+  it('expanded, the note shows Diagnosis, Strategy, Practice, Study topics and its cost', async () => {
     stubFetch({ ok: true, remainingUsd: 5, capUsd: 5 })
     actions.setCoachingNote('focus:K', NOTE)
     render(<Errors />)
     await userEvent.click(within(section()).getByText(/· You read "confounder"/))
-    for (const h of ['Diagnosis', 'Strategy', 'Practice']) expect(within(section()).getByText(h)).toBeVisible()
+    for (const h of ['Diagnosis', 'Strategy', 'Practice', 'Study topics']) expect(within(section()).getByText(h)).toBeVisible()
+    expect(within(section()).getByText('confounding variable')).toBeVisible()
+    expect(within(section()).queryByRole('button', { name: /Find study links/ })).not.toBeInTheDocument()
     expect(within(section()).getByText(/In B3-03 you assumed X\./)).toBeVisible()
     expect(within(section()).getByText('Write the definition before you answer.')).toBeVisible()
     expect(within(section()).getByText('Redo B3-03 from the definition.')).toBeVisible()

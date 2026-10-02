@@ -78,9 +78,8 @@ describe('per-Block merge', () => {
       createdAt,
       model: 'claude-sonnet-5-5',
       basedOn: [],
-      sections: { diagnosis, strategies: [], practice: [], searchTopic: '' },
-      links: [],
-      usage: { inputTokens: 1, outputTokens: 1, searches: 0, costUsd: 0.01 },
+      sections: { diagnosis, strategies: [], practice: [], studyTopics: [''] },
+      usage: { inputTokens: 1, outputTokens: 1, costUsd: 0.01 },
     })
     const l = st({ coachingNotes: { 'focus:K': note('2026-10-02T00:00:00Z', 'local K'), 'focus:R': note('2026-10-05T00:00:00Z', 'local R') } })
     const i = st({ coachingNotes: { 'focus:K': note('2026-10-03T00:00:00Z', 'incoming K'), 'focus:R': note('2026-10-01T00:00:00Z', 'old R'), 'focus:H': note('2026-10-01T00:00:00Z', 'H') } })

@@ -41,14 +41,14 @@ const SECTIONS = {
   diagnosis: 'You treat "confounder" as any third variable.\nSecond line.',
   strategies: ['Write the definition before answering.'],
   practice: ['Redo W1D1-B2 from the definition.'],
-  searchTopic: 'confounding variable explained',
+  studyTopics: ['confounding variable explained'],
 }
 const message = (p: Partial<Anthropic.Message> = {}): Anthropic.Message =>
   ({
     id: 'msg_1',
     type: 'message',
     role: 'assistant',
-    model: 'claude-sonnet-5-5',
+    model: 'claude-haiku-4-5',
     content: [{ type: 'text', text: JSON.stringify(SECTIONS), citations: null }],
     stop_reason: 'end_turn',
     stop_sequence: null,
@@ -61,10 +61,10 @@ const BODY = {
   basedOn: [{ id: 'W1D1-B2', week: 1 }],
 }
 const diagnose = (d: CoachDeps, body: unknown = BODY) => handleCoach({ method: 'POST', path: '/diagnose', body }, d)
-const COST = 2129 * 2e-6 + 802 * 10e-6
+const COST = 2129 * 1e-6 + 802 * 5e-6
 
 describe('POST /diagnose', () => {
-  it('calls Sonnet 5.5 once with structured output and returns the note with its cost', async () => {
+  it('calls Haiku 4.5 once with structured output and returns the note with its cost', async () => {
     const calls: Anthropic.MessageCreateParamsNonStreaming[] = []
     const d = deps({
       client: fakeClient(async (p) => {
@@ -75,19 +75,18 @@ describe('POST /diagnose', () => {
     const r = await diagnose(d)
     expect(calls).toHaveLength(1)
     const p = calls[0]
-    expect(p).toMatchObject({ model: 'claude-sonnet-5-5', max_tokens: 3000, output_config: { effort: 'low' } })
-    expect(p.output_config?.format).toMatchObject({ type: 'json_schema' })
+    expect(p).toMatchObject({ model: 'claude-haiku-4-5', max_tokens: 3000, output_config: { format: { type: 'json_schema' } } })
+    expect(p.output_config?.format).toMatchObject({ type: 'json_schema', schema: { required: expect.arrayContaining(['studyTopics']) } })
     expect(JSON.stringify(p.messages)).toContain('W1D1-B2')
     expect(p.system).toBeTruthy()
     expect(r.status).toBe(200)
     expect(r.body).toEqual({
       note: {
         createdAt: NOW.toISOString(),
-        model: 'claude-sonnet-5-5',
+        model: 'claude-haiku-4-5',
         basedOn: BODY.basedOn,
         sections: SECTIONS,
-        links: [],
-        usage: { inputTokens: 2129, outputTokens: 802, searches: 0, costUsd: COST },
+        usage: { inputTokens: 2129, outputTokens: 802, costUsd: COST },
       },
       remainingUsd: 5 - COST,
     })
@@ -119,11 +118,11 @@ describe('monthly spend cap', () => {
     expect((await handleCoach({ method: 'GET', path: '/health' }, nextMonth)).body).toEqual({ ok: true, remainingUsd: 5, capUsd: 5 })
   })
 
-  it('defaults to $5, overridable with COACH_MONTHLY_USD', () => {
-    expect(capFromEnv({})).toBe(5)
+  it('defaults to $3, overridable with COACH_MONTHLY_USD', () => {
+    expect(capFromEnv({})).toBe(3)
     expect(capFromEnv({ COACH_MONTHLY_USD: '2.5' })).toBe(2.5)
-    expect(capFromEnv({ COACH_MONTHLY_USD: 'lots' })).toBe(5)
-    expect(capFromEnv({ COACH_MONTHLY_USD: '-1' })).toBe(5)
+    expect(capFromEnv({ COACH_MONTHLY_USD: 'lots' })).toBe(3)
+    expect(capFromEnv({ COACH_MONTHLY_USD: '-1' })).toBe(3)
   })
 })
 

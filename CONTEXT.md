@@ -165,7 +165,7 @@ One prioritised thing to work on, produced by the Error profile, with the eviden
 _Avoid_: Recommendation, weakness
 
 **Coaching note**:
-Claude's saved diagnosis of one Focus or one miss, with a strategy and links to study material found by live search. Kept in progress, dated, never generated automatically.
+Claude's saved diagnosis of one Focus or one miss, with a strategy, practice and study topics to look up. Kept in progress, dated, never generated automatically.
 _Avoid_: AI feedback, tutor reply
 
 **Scorecard**:

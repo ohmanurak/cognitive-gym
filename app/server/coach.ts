@@ -7,9 +7,10 @@ import Anthropic from '@anthropic-ai/sdk'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-export const COACH_MODEL = 'claude-sonnet-5-5'
-/** Claude Sonnet 5.5 list prices, USD per token. */
-const PRICE = { input: 2 / 1e6, output: 10 / 1e6, search: 0.01 }
+/** Cheapest current model. */
+export const COACH_MODEL = 'claude-haiku-4-5'
+/** Claude Haiku 4.5 list prices, USD per token. */
+const PRICE = { input: 1 / 1e6, output: 5 / 1e6 }
 
 export interface CoachClient {
   messages: { create(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> }
@@ -43,12 +44,12 @@ export interface CoachResponse {
 const SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['diagnosis', 'strategies', 'practice', 'searchTopic'],
+  required: ['diagnosis', 'strategies', 'practice', 'studyTopics'],
   properties: {
     diagnosis: { type: 'string' },
     strategies: { type: 'array', items: { type: 'string' } },
     practice: { type: 'array', items: { type: 'string' } },
-    searchTopic: { type: 'string' },
+    studyTopics: { type: 'array', items: { type: 'string' } },
   },
 }
 
@@ -59,7 +60,7 @@ export const SYSTEM_PROMPT = [
   'diagnosis: the shared reasoning pattern across the misses, at most 150 words. Quote their failed assumptions and cite Item ids.',
   'strategies: 1 to 3 concrete Fix sentences, each a check or procedure they can run. Never "be careful", "double-check", "pay attention" or "try harder".',
   'practice: what to do this week. You may name Items listed in the misses, or describe generic drills. Never name, invent or reveal any other workbook Item.',
-  'searchTopic: a short web search query for free study material on the underlying concept.',
+  "studyTopics: 2 to 4 underlying concepts to study, each a short name they can look up (e.g. 'base-rate neglect'), then ' — ' and one line on why it matters for these misses.",
 ].join('\n\n')
 
 /** Per-miss variant (#44): one miss, where the Answer left the Key's derivation, 1 strategy, short practice. */
@@ -69,12 +70,12 @@ export const MISS_SYSTEM_PROMPT = [
   "diagnosis: walk through where their Answer diverged from the Key's derivation, step by step, and say whether they fell into the Key's trap. At most 120 words.",
   'strategies: exactly 1 concrete Fix sentence, a check or procedure they can run. Never "be careful", "double-check", "pay attention" or "try harder".',
   'practice: 1 or 2 short items for this week. You may name this Item, or describe generic drills. Never name, invent or reveal any other workbook Item.',
-  'searchTopic: a short web search query for free study material on the underlying concept.',
+  "studyTopics: 1 to 3 underlying concepts to study, each a short name they can look up (e.g. 'base-rate neglect'), then ' — ' and one line on why it matters for this miss.",
 ].join('\n\n')
 
-export const DEFAULT_MONTHLY_USD = 5
+export const DEFAULT_MONTHLY_USD = 3
 
-/** Monthly cap from `COACH_MONTHLY_USD` (app/.env.local); default $5. */
+/** Monthly cap from `COACH_MONTHLY_USD` (app/.env.local); default $3. */
 export function capFromEnv(env: Record<string, string | undefined>): number {
   const n = Number(env.COACH_MONTHLY_USD)
   return env.COACH_MONTHLY_USD && Number.isFinite(n) && n >= 0 ? n : DEFAULT_MONTHLY_USD
@@ -110,8 +111,7 @@ export function createSpendStore(dir: string): SpendStore {
 
 export const costOf = (u: Anthropic.Usage) =>
   (u.input_tokens + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)) * PRICE.input +
-  u.output_tokens * PRICE.output +
-  (u.server_tool_use?.web_search_requests ?? 0) * PRICE.search
+  u.output_tokens * PRICE.output
 
 export const NO_KEY = 'API key missing or invalid. Set ANTHROPIC_API_KEY in app/.env.local'
 
@@ -158,7 +158,7 @@ export async function handleCoach(req: CoachRequest, deps: CoachDeps): Promise<C
     res = await deps.client.messages.create({
       model: COACH_MODEL,
       max_tokens: 3000,
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
+      output_config: { format: { type: 'json_schema', schema: SCHEMA } },
       system: perMiss ? MISS_SYSTEM_PROMPT : SYSTEM_PROMPT,
       messages: [{ role: 'user', content: JSON.stringify(body.payload, null, 1) }],
     })
@@ -172,7 +172,6 @@ export async function handleCoach(req: CoachRequest, deps: CoachDeps): Promise<C
   const usage = {
     inputTokens: res.usage.input_tokens,
     outputTokens: res.usage.output_tokens,
-    searches: res.usage.server_tool_use?.web_search_requests ?? 0,
     costUsd,
   }
   const fail = (status: number, error: string) => {
@@ -190,7 +189,7 @@ export async function handleCoach(req: CoachRequest, deps: CoachDeps): Promise<C
   return {
     status: 200,
     body: {
-      note: { createdAt: deps.now().toISOString(), model: COACH_MODEL, basedOn: body.basedOn, sections, links: [], usage },
+      note: { createdAt: deps.now().toISOString(), model: COACH_MODEL, basedOn: body.basedOn, sections, usage },
       remainingUsd: remaining(),
     },
   }

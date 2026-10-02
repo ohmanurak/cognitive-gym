@@ -10,9 +10,8 @@ const note = (basedOn: string[]): CoachingNote => ({
   createdAt: '2026-10-02T10:00:00.000Z',
   model: 'claude-sonnet-5-5',
   basedOn: basedOn.map((id) => ({ id, week: 0 })),
-  sections: { diagnosis: 'd', strategies: ['s'], practice: ['p'], searchTopic: 't' },
-  links: [],
-  usage: { inputTokens: 1, outputTokens: 1, searches: 0, costUsd: 0.01 },
+  sections: { diagnosis: 'd', strategies: ['s'], practice: ['p'], studyTopics: ['t'] },
+  usage: { inputTokens: 1, outputTokens: 1, costUsd: 0.01 },
 })
 
 describe('newMissesSince (stale Focus notes)', () => {

@@ -97,9 +97,8 @@ export interface CoachingNote {
   model: string
   /** The misses the note was built from, with their week. */
   basedOn: { id: string; week: number }[]
-  sections: { diagnosis: string; strategies: string[]; practice: string[]; searchTopic: string }
-  links: { url: string; title: string; source: 'youtube' | 'blog'; reason: string; verified: boolean }[]
-  usage: { inputTokens: number; outputTokens: number; searches: number; costUsd: number }
+  sections: { diagnosis: string; strategies: string[]; practice: string[]; studyTopics: string[] }
+  usage: { inputTokens: number; outputTokens: number; costUsd: number }
 }
 
 export const emptyState = (): State => ({
@@ -116,20 +115,6 @@ export const emptyState = (): State => ({
 /** Save (or replace) a Coaching note. */
 export function setCoachingNote(s: State, key: string, note: CoachingNote): State {
   return { ...s, coachingNotes: { ...s.coachingNotes, [key]: note } }
-}
-
-/** Add found study links to a saved note: replaces `links`, adds the search cost to `usage`. Diagnosis untouched. */
-export function addCoachingLinks(s: State, key: string, links: CoachingNote['links'], usage: CoachingNote['usage']): State {
-  const note = s.coachingNotes[key]
-  if (!note) return s
-  const u = note.usage
-  const sum = {
-    inputTokens: u.inputTokens + usage.inputTokens,
-    outputTokens: u.outputTokens + usage.outputTokens,
-    searches: u.searches + usage.searches,
-    costUsd: u.costUsd + usage.costUsd,
-  }
-  return setCoachingNote(s, key, { ...note, links, usage: sum })
 }
 
 /** Use as Fix: copy a coaching strategy into the first-attempt Fix of each selected miss. */

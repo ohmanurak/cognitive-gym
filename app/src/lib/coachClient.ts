@@ -86,35 +86,3 @@ export async function requestDiagnosis(key: string, payload: CoachPayload | Miss
     set({ running })
   }
 }
-
-/** Running-set key for a note's link search (kept apart from its diagnosis). */
-export const linksKey = (key: string) => `links:${key}`
-
-export type LinksResult = { links: CoachingNote['links']; usage: CoachingNote['usage'] } | { error: string }
-
-/** POST /api/coach/links. Refuses (null) when this note's search is already running. */
-export async function requestLinks(key: string, searchTopic: string): Promise<LinksResult | null> {
-  const run = linksKey(key)
-  if (snap.running.has(run)) return null
-  set({ running: new Set([...snap.running, run]) })
-  try {
-    const r = await fetch('/api/coach/links', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, searchTopic }),
-    })
-    const body = (await r.json().catch(() => ({}))) as Partial<{ links: CoachingNote['links']; usage: CoachingNote['usage'] }> & {
-      error?: string
-      remainingUsd?: number
-    }
-    if (snap.health && typeof body.remainingUsd === 'number') set({ health: { ...snap.health, remainingUsd: body.remainingUsd } })
-    if (r.ok && Array.isArray(body.links) && body.usage) return { links: body.links, usage: body.usage }
-    return { error: body.error ?? `Link search failed (${r.status})` }
-  } catch {
-    return { error: "Couldn't reach Claude" }
-  } finally {
-    const running = new Set(snap.running)
-    running.delete(run)
-    set({ running })
-  }
-}

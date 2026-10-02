@@ -28,7 +28,7 @@ npm ci
 npm run dev        # parses the workbook, starts Vite
 ```
 
-Claude coaching (`/api/coach/*` dev middleware, `server/coach.ts`, `server/links.ts`) needs `ANTHROPIC_API_KEY` in `app/.env.local` and works only under `npm run dev`. See [Claude coaching](../README.md#claude-coaching-optional) for setup, costs, the spend cap and what is sent.
+Claude coaching (`/api/coach/*` dev middleware, `server/coach.ts`) needs `ANTHROPIC_API_KEY` in `app/.env.local` and works only under `npm run dev`. See [Claude coaching](../README.md#claude-coaching-optional) for setup, costs, the spend cap and what is sent.
 
 `npm run data` (run automatically by `dev` and `build`) parses the workbook into `src/data/workbook.json`. The file is generated and gitignored.
 

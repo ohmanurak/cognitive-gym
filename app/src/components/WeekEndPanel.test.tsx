@@ -115,10 +115,9 @@ const NOTE: CoachingNote = {
     diagnosis: 'You jump to the answer before drawing the structure.',
     strategies: ['Sketch the structure first.', 'Name the relation before solving.'],
     practice: ['Redo two R misses.'],
-    searchTopic: 'problem representation',
+    studyTopics: ['problem representation'],
   },
-  links: [],
-  usage: { inputTokens: 1, outputTokens: 1, searches: 0, costUsd: 0.01 },
+  usage: { inputTokens: 1, outputTokens: 1, costUsd: 0.01 },
 }
 
 /** fetch stub: the /api/coach health answer. */

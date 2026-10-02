@@ -28,9 +28,8 @@ const note = (diagnosis: string, basedOn: string[], strategies = ['Write the def
   createdAt: '2026-10-02T10:00:00.000Z',
   model: 'claude-sonnet-5-5',
   basedOn: basedOn.map((id) => ({ id, week: 0 })),
-  sections: { diagnosis, strategies, practice: ['Redo it.'], searchTopic: 'topic' },
-  links: [],
-  usage: { inputTokens: 1000, outputTokens: 300, searches: 0, costUsd: 0.005 },
+  sections: { diagnosis, strategies, practice: ['Redo it.'], studyTopics: ['topic'] },
+  usage: { inputTokens: 1000, outputTokens: 300, costUsd: 0.005 },
 })
 
 const json = (status: number, body: unknown) =>
