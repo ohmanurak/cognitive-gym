@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { dayBlocks } from './erroranalysis'
 import { progressOf } from './metrics'
-import { emptyState, setWeekAnswer, type Attempt, type State } from './state'
-import { blocks } from './structure'
-import { daysTrained, reflectionQuestions, restDay, weekComplete, weekEnd } from './weekend'
+import { emptyState, setWeekAnswer, type Attempt, type ErrorCode, type State } from './state'
+import { blocks, workbook } from './structure'
+import { daysTrained, reflectionQuestions, restDay, weekComplete, weekEnd, weekEndFocus } from './weekend'
 
 const W = 1
 
@@ -90,5 +90,48 @@ describe('days trained', () => {
     s.blocks[other.key] = { round: 1, committed: true, committedAt: [local(9, 10, 0)] } as never
     expect(daysTrained(s, W)).toBe(2)
     expect(daysTrained(emptyState(), W)).toBe(0)
+  })
+})
+
+/** Score `n` unused Items of a Week as full misses with the given Error code (and Fix). */
+function miss(s: State, week: number, n: number, code: ErrorCode, fix?: string): State {
+  const ids = workbook.items.filter((i) => i.stage === 'week' && i.week === week && !s.attempts[i.id]).slice(0, n)
+  for (const i of ids) s.attempts[i.id] = [{ round: 1, answer: 'x', confidence: 3, score: 0, errorCode: code, fix } as Attempt]
+  return s
+}
+
+describe('week-end Top Focus', () => {
+  it('is the top Focus as of the Week being closed; later Weeks are ignored', () => {
+    const s = miss(miss(emptyState(), 1, 3, 'K'), 2, 6, 'R')
+    expect(weekEndFocus(s, 1).focus?.code).toBe('K')
+    expect(weekEndFocus(s, 2).focus?.code).toBe('R')
+  })
+
+  it('calls out a Fix not working, but only once the recurrence is within the Week being closed', () => {
+    const s = miss(miss(emptyState(), 1, 3, 'K', 'Look up the definition first'), 2, 1, 'K')
+    expect(weekEndFocus(s, 1).callout).toBeNull()
+    expect(weekEndFocus(s, 2).callout).toBe("Your Fix for K didn't stop it. Rewrite the strategy, don't repeat it.")
+  })
+
+  it('quotes the Workbook line when the dominant error has held for 3+ Weeks up to the Week being closed', () => {
+    let s = emptyState()
+    for (const w of [1, 2, 3]) s = miss(s, w, 1, 'H')
+    s = miss(s, 4, 2, 'P')
+    expect(weekEndFocus(s, 2).callout).toBeNull()
+    expect(weekEndFocus(s, 3).callout).toBe(
+      'Dominant error H for 3 Weeks in a row: your strategy is not changing; rewrite it explicitly.',
+    )
+    expect(weekEndFocus(s, 4).callout).toBeNull()
+  })
+
+  it('Fix not working takes priority over a repeated dominant error', () => {
+    let s = miss(emptyState(), 1, 1, 'H', 'Write two rival hypotheses')
+    for (const w of [2, 3]) s = miss(s, w, 1, 'H')
+    expect(weekEndFocus(s, 3).callout).toBe("Your Fix for H didn't stop it. Rewrite the strategy, don't repeat it.")
+  })
+
+  it('nothing ranks: no Top Focus and no call-out', () => {
+    const s = miss(emptyState(), 1, 2, 'K')
+    expect(weekEndFocus(s, 1)).toEqual({ focus: null, callout: null })
   })
 })

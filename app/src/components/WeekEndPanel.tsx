@@ -1,6 +1,16 @@
+import { Fragment, useId } from 'react'
 import { firstOpenMissBlock } from '../lib/erroranalysis'
 import { ERROR_CODES, actions, type State } from '../lib/store'
-import { daysTrained, reflectionAnswers, reflectionQuestions, restDay, weekEnd, weekScorecard } from '../lib/weekend'
+import {
+  daysTrained,
+  reflectionAnswers,
+  reflectionQuestions,
+  restDay,
+  weekEnd,
+  weekEndFocus,
+  weekScorecard,
+} from '../lib/weekend'
+import { FocusCard } from './FocusCard'
 
 const pct = (n: number | null) => (n == null ? '-' : `${n.toFixed(0)}%`)
 
@@ -62,6 +72,9 @@ export function WeekEndPanel({ s, week }: { s: State; week: number }) {
   const open = firstOpenMissBlock(s, week, 6)
   const qs = reflectionQuestions(week)
   const answers = reflectionAnswers(s, week)
+  const top = weekEndFocus(s, week)
+  const promptId = useId()
+  const strategy = qs.length - 1
   return (
     <div>
       <h2>Week-end</h2>
@@ -82,6 +95,20 @@ export function WeekEndPanel({ s, week }: { s: State; week: number }) {
         )}
       </p>
       <WeekScorecardView s={s} week={week} />
+      {top.callout && (
+        <div className="notice" role="alert">
+          {top.callout}
+        </div>
+      )}
+      {top.focus && (
+        <section aria-label="Top Focus">
+          <h3>Top Focus</h3>
+          <FocusCard focus={top.focus} max={top.focus.score} />
+          <a className="small" href="#/errors">
+            see all on Error log
+          </a>
+        </section>
+      )}
       <h3>2. Weekly reflection</h3>
       {!we.errors.complete ? (
         <p className="muted small">Finish the Day 6 error analysis first.</p>
@@ -89,16 +116,26 @@ export function WeekEndPanel({ s, week }: { s: State; week: number }) {
         <>
           <div className="muted small">Only the last answer (strategy) is required.</div>
           {qs.map((q, i) => (
-            <label key={i} style={{ display: 'block', marginTop: 8 }}>
-              <span>
-                {i + 1}. {q}
-              </span>
-              <textarea
-                value={answers[i]}
-                onChange={(e) => actions.setWeekAnswer(week, i, e.target.value)}
-                style={{ minHeight: 60 }}
-              />
-            </label>
+            <Fragment key={i}>
+              <label style={{ display: 'block', marginTop: 8 }}>
+                <span>
+                  {i + 1}. {q}
+                </span>
+                <textarea
+                  value={answers[i]}
+                  onChange={(e) => actions.setWeekAnswer(week, i, e.target.value)}
+                  aria-describedby={i === strategy ? promptId : undefined}
+                  style={{ minHeight: 60 }}
+                />
+              </label>
+              {i === strategy && (
+                <div id={promptId} className="small muted">
+                  {top.focus
+                    ? `Your top Focus is ${top.focus.code} · ${top.focus.name}. What will you change?`
+                    : 'What will you change next week?'}
+                </div>
+              )}
+            </Fragment>
           ))}
           {!we.reflection && <p className="small">Week-end is complete once the last (strategy) answer is filled in.</p>}
         </>

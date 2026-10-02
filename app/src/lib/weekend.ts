@@ -4,7 +4,9 @@
  * steps are complete, and the reflection has a non-empty strategy-change answer.
  */
 import { dayComplete, errorAnalysis, type ErrorAnalysis } from './erroranalysis'
+import { rankFocus, type Focus } from './focus'
 import { firstAttempt, scopeStats, type ScopeStats } from './metrics'
+import { repeatedDominantError, weekSignal } from './signals'
 import type { State } from './state'
 import { blockState } from './state'
 import { blocks, itemById, workbook, type BlockDef } from './structure'
@@ -99,4 +101,29 @@ export function weekScorecard(s: State, week: number): WeekScorecard {
   const confidence = n ? conf / n : null
   const accuracy = n ? (right / n) * 100 : null
   return { stats, confidence, accuracy, gap: confidence != null && accuracy != null ? confidence - accuracy : null }
+}
+
+export interface WeekEndFocus {
+  /** The top-ranked Focus as of the Week, or null when nothing ranks. */
+  focus: Focus | null
+  /** At most one call-out line for above the card. */
+  callout: string | null
+}
+
+/**
+ * The Top Focus shown at a Week's week-end, computed as of that Week (later Weeks ignored),
+ * with at most one call-out: a Fix not working first, else a dominant error that has held
+ * for 3+ Weeks ending at this Week (the Workbook's "strategy is not changing" line).
+ */
+export function weekEndFocus(s: State, week: number): WeekEndFocus {
+  const { focus } = rankFocus(s, week)
+  const notWorking = focus.find((f) => f.fixNotWorking)
+  const rows = Array.from({ length: week }, (_, i) => weekSignal(s, i + 1))
+  const repeated = repeatedDominantError(rows)
+  const callout = notWorking
+    ? `Your Fix for ${notWorking.code} didn't stop it. Rewrite the strategy, don't repeat it.`
+    : repeated && repeated.weeks[repeated.weeks.length - 1] === week
+      ? `Dominant error ${repeated.code} for ${repeated.weeks.length} Weeks in a row: your strategy is not changing; rewrite it explicitly.`
+      : null
+  return { focus: focus[0] ?? null, callout }
 }
