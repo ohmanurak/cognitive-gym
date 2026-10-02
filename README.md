@@ -64,3 +64,36 @@ Tips:
 - Use the same address every time; a different address or port is a different, empty store.
 - Update: `git pull`, then `npm ci`, then `npm run dev`.
 - More (tests, build, deploy, release checklist): [app/README.md](app/README.md).
+
+### Claude coaching (optional)
+
+The Error log ranks what to work on (Focus) without any setup. On top of that, Claude can write a Coaching note for a Focus or a single miss, and find study links. This needs your own Anthropic API key and is off until you add one.
+
+**Setup:** create `app/.env.local` (it is gitignored) containing:
+
+```sh
+ANTHROPIC_API_KEY=sk-ant-...
+# optional, monthly spend cap in USD (default 5)
+COACH_MONTHLY_USD=5
+```
+
+Then restart `npm run dev`. The Coach buttons appear only when the key is set.
+
+**Only under `npm run dev`.** The key is read by the local dev server and never reaches the browser or the build. A static build (`npm run build`, any deployed copy) has no Coach buttons. Saved Coaching notes still show there.
+
+**Costs** (approximate, charged to your Anthropic account):
+
+| Action | Cost |
+| ------ | ---: |
+| Coach me (a Focus) / Coach this miss | ~$0.01 |
+| Regenerate a note | ~$0.01 |
+| Find study links (YouTube + blog web search) | ~$0.16 |
+
+Each note shows its actual cost. The dev server keeps a running total per calendar month in `coach-spend.json` in the save folder (`~/CognitiveGym`, or `COGYM_SAVE_DIR`). Once the total reaches `COACH_MONTHLY_USD`, the buttons are disabled with "Monthly coaching budget used" until the next month. Nothing is ever generated automatically; every call is a click.
+
+**What is sent to Anthropic.** Only for the misses you coach, and only scored Items (the Discipline Rule holds):
+- Coach me: up to your latest 5 coded first-attempt misses of that Focus, each with its Item text, your Answer, the Key (answer, derivation, trap), Skill, points and score, Week, Con/Car, failed assumption and Fix; plus the Error code's definition and the Focus evidence (misses, points lost, Weeks, Fix not working).
+- Coach this miss: the same fields for that one miss, plus its Error code's definition if coded.
+- Find study links: only the note's short search topic. Links are checked by your machine (YouTube oEmbed, the page itself) before they are shown.
+
+Nothing else from your progress (other Items, Reflections, span tests, times) is sent. The console logs only status, tokens and cost.
