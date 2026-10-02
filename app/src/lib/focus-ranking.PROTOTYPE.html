@@ -1,0 +1,250 @@
+<!doctype html>
+<!-- PROTOTYPE — throwaway. Answers ticket "Focus ranking formula on real Error log data". Open by double-click. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Focus Ranking Prototype</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#1d1d1b; --muted:#6b6b66; --card:#fff; --line:#e4e3de; --accent:#2f5bd3; --warn:#b4541a; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#161615; --fg:#ecebe6; --muted:#9a9993; --card:#1f1f1d; --line:#33332f; --accent:#7f9dff; --warn:#f0a070; } }
+  body { background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, sans-serif; margin:0; padding:24px 16px; }
+  main { max-width:1000px; margin:0 auto; }
+  h1 { margin:0 0 4px; font-size:22px } h2 { font-size:16px; margin:24px 0 8px }
+  .muted { color:var(--muted) } .small { font-size:13px }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin:10px 0 }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px } @media (max-width:760px){ .grid{grid-template-columns:1fr} }
+  button, select, input { font:inherit; padding:5px 10px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:var(--fg) }
+  button { cursor:pointer } button.on, button.primary { background:var(--accent); color:#fff; border-color:var(--accent) }
+  button:disabled { opacity:.4; cursor:default }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center }
+  table { border-collapse:collapse; width:100% } td, th { text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); font-size:13px }
+  .focus { border-left:4px solid var(--accent); padding:8px 12px; margin:8px 0; background:var(--card); border-radius:6px }
+  .focus.prov { border-left-color:var(--line); opacity:.65 }
+  .chip { display:inline-block; font-size:12px; padding:1px 7px; border-radius:20px; border:1px solid var(--line); margin-right:4px }
+  .chip.warn { border-color:var(--warn); color:var(--warn) }
+  .bar { height:6px; background:var(--accent); border-radius:3px; margin-top:4px }
+  .changed { color:var(--accent); font-weight:600 }
+  .tabs button { border-radius:7px 7px 0 0 }
+  .opt { display:flex; gap:6px; align-items:center; margin:4px 0 }
+  .opt label { min-width:190px }
+</style>
+</head>
+<body>
+<main>
+  <h1>Which Focus should come first?</h1>
+  <p class="muted">The question: given everything in the Error log, which rule ranks the areas to work on in a way that feels right? Choose a preset rule or adjust the knobs, load your real data or a scenario, and check whether the top Focus is the one you would pick yourself.</p>
+
+  <div class="card">
+    <div class="row"><b>Ranking rule:</b>
+      <button data-preset="A">A · Most frequent code</button>
+      <button data-preset="B">B · Points lost, conceptual ×1.5</button>
+      <button data-preset="C">C · Skill × code, recent, Fix not working</button>
+    </div>
+    <div id="knobs" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <h2>Ranked Focus list</h2>
+      <div id="changed" class="small changed"></div>
+      <div id="focus"></div>
+    </div>
+    <div>
+      <h2>Error log (<span id="n"></span> misses, current week <span id="wk"></span>)</h2>
+      <div class="card small" style="max-height:420px;overflow:auto"><table id="log"></table></div>
+    </div>
+  </div>
+
+  <h2>Free play</h2>
+  <div class="card row small">
+    Add a miss:
+    <select id="f-code"></select><select id="f-skill"></select>
+    week <input id="f-week" type="number" value="3" min="0" max="13" style="width:56px">
+    points <input id="f-pts" type="number" value="2" min="1" max="6" style="width:52px">
+    scored <input id="f-score" type="number" value="0" min="0" style="width:52px">
+    <select id="f-nat"><option value="">no Con/Car</option><option>Con</option><option>Car</option></select>
+    <label><input id="f-fix" type="checkbox"> has a Fix</label>
+    <button id="add" class="primary">Add miss</button>
+    <button id="next">Next week →</button>
+    <button id="clear">Clear log</button>
+  </div>
+
+  <h2>Guided walkthroughs</h2>
+  <div class="tabs row" id="tabs"></div>
+  <div class="card" id="scenario"></div>
+</main>
+
+<script>
+/* ===== Pure module: liftable into app/src/lib/focus.ts ===== */
+const CONCEPTUAL = ['H', 'A', 'R', 'L']
+const CODE_NAMES = { P:'Perception', R:'Representation', A:'Abstraction', WM:'Working memory', H:'Hypothesis', L:'Logic', C:'Calculation', S:'Speed', K:'Knowledge gap' }
+const SKILL_NAMES = { PD:'Pattern detection', AB:'Abstraction', WM:'Working memory', HT:'Hypothesis testing', PE:'Processing efficiency', IR:'Integrated reasoning' }
+
+const PRESETS = {
+  A: { unit:'code', loss:'count', conceptualBy:'none', conceptualWeight:1, halfLife:0, fixBoost:1, minMisses:3 },
+  B: { unit:'code', loss:'points', conceptualBy:'code', conceptualWeight:1.5, halfLife:0, fixBoost:1, minMisses:3 },
+  C: { unit:'skillCode', loss:'share', conceptualBy:'code', conceptualWeight:1.5, halfLife:2, fixBoost:1.5, minMisses:3 },
+  // Chosen rule (ticket resolution): rank by Error code; Skill split shown as evidence.
+  D: { unit:'code', loss:'points', conceptualBy:'code', conceptualWeight:1.5, halfLife:2, fixBoost:1.5, minMisses:3 },
+}
+
+/** miss: { id, week, skill, code, points, score, nature, fix } -> ranked Focus list */
+function rankFocus(misses, opts, currentWeek) {
+  const groups = new Map()
+  for (const m of misses) {
+    const key = opts.unit === 'code' ? m.code : opts.unit === 'skill' ? m.skill : `${m.skill} × ${m.code}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(m)
+  }
+  const out = []
+  for (const [key, list] of groups) {
+    let score = 0, lost = 0
+    for (const m of list) {
+      const l = m.points - m.score
+      lost += l
+      let w = opts.loss === 'count' ? 1 : opts.loss === 'points' ? l : l / m.points
+      const conceptual = opts.conceptualBy === 'code' ? CONCEPTUAL.includes(m.code)
+        : opts.conceptualBy === 'flag' ? m.nature === 'Con' : false
+      if (conceptual) w *= opts.conceptualWeight
+      if (opts.halfLife > 0) w *= Math.pow(0.5, Math.max(0, currentWeek - m.week) / opts.halfLife)
+      score += w
+    }
+    // "Fix not working": a miss with a Fix, then the same group misses again in a later week.
+    const fixWeeks = list.filter((m) => m.fix).map((m) => m.week)
+    const recurred = fixWeeks.length > 0 && list.some((m) => m.week > Math.min(...fixWeeks))
+    if (recurred) score *= opts.fixBoost
+    const weeks = [...new Set(list.map((m) => m.week))].sort((a, b) => a - b)
+    out.push({ key, score, misses: list.length, pointsLost: lost, weeks, fixNotWorking: recurred,
+      provisional: list.length < opts.minMisses, examples: list.slice(-3).map((m) => m.id) })
+  }
+  out.sort((a, b) => (a.provisional - b.provisional) || b.score - a.score)
+  return out
+}
+/* ===== end pure module ===== */
+
+const REAL = [
+  {id:'B2-03',week:0,skill:'WM',points:2,score:0,code:'S',nature:'Con',fix:'Rework again, i still got time'},
+  {id:'B3-01',week:0,skill:'AB',points:4,score:2,code:'H',nature:'Con',fix:'reread the answer and write it down'},
+  {id:'B3-03',week:0,skill:'AB',points:4,score:0,code:'K',nature:'Con',fix:''},
+  {id:'B3-04',week:0,skill:'AB',points:4,score:2,code:'WM',nature:'Con',fix:'find the pattern'},
+  {id:'B3-05',week:0,skill:'AB',points:4,score:0,code:'K',nature:null,fix:''},
+  {id:'B4-01',week:0,skill:'HT',points:4,score:3,code:'R',nature:'Car',fix:''},
+  {id:'B4-02',week:0,skill:'HT',points:4,score:3,code:'R',nature:'Con',fix:''},
+  {id:'B4-03',week:0,skill:'HT',points:4,score:0,code:'K',nature:'Con',fix:''},
+  {id:'B4-05',week:0,skill:'HT',points:4,score:2,code:'R',nature:'Car',fix:''},
+  {id:'B5-07',week:0,skill:'PE',points:1,score:0,code:'S',nature:'Car',fix:''},
+  {id:'B5-11',week:0,skill:'PE',points:1,score:0,code:'S',nature:'Con',fix:''},
+  {id:'W1D1-B2',week:1,skill:'PD',points:2,score:1,code:'K',nature:'Car',fix:''},
+]
+
+let seq = 0
+const mk = (week, skill, code, points, score, nature, fix) => ({ id:`W${week}-sim${++seq}`, week, skill, code, points, score, nature, fix: fix ? 'some strategy' : '' })
+const many = (n, f) => Array.from({ length:n }, f)
+
+const SCENARIOS = [
+  { name:'Your real data', desc:'Your 12 coded misses so far: 11 from the Baseline (shown as week 0) and 1 from Week 1 Day 1. Look at what each rule puts first. Do Knowledge gaps (K) spread across Skills deserve the top spot? Notice how few groups clear the 3-miss minimum under rule C.',
+    steps:[ { label:'Load real data, current week 1', run: (st) => ({ ...st, misses:[...REAL], week:1 }) },
+            { label:'Switch to rule A', run:(st)=>({ ...st, opts:{...PRESETS.A} }) },
+            { label:'Switch to rule B', run:(st)=>({ ...st, opts:{...PRESETS.B} }) },
+            { label:'Switch to rule C', run:(st)=>({ ...st, opts:{...PRESETS.C} }) },
+            { label:'Rule B, but trust my Con/Car flags', run:(st)=>({ ...st, opts:{...PRESETS.B, conceptualBy:'flag'} }) } ] },
+  { name:'Careless flood', desc:'Weeks 3–4: eight 1-point Calculation slips against two 4-point Hypothesis failures where you scored 0. Rule A picks C because it is counted most often. Which one is the real thing to work on?',
+    steps:[ { label:'Week 3: 5 calculation slips', run:(st)=>({ ...st, week:3, misses:[...st.misses, ...many(5,()=>mk(3,'PE','C',1,0,'Car',false))] }) },
+            { label:'Week 3: 1 hypothesis failure (4 pts, scored 0)', run:(st)=>({ ...st, misses:[...st.misses, mk(3,'HT','H',4,0,'Con',true)] }) },
+            { label:'Week 4: 3 more slips + 1 more hypothesis failure', run:(st)=>({ ...st, week:4, misses:[...st.misses, ...many(3,()=>mk(4,'PE','C',1,0,'Car',false)), mk(4,'HT','H',4,0,'Con',true)] }) },
+            { label:'Compare rule A', run:(st)=>({ ...st, opts:{...PRESETS.A} }) },
+            { label:'Compare rule B', run:(st)=>({ ...st, opts:{...PRESETS.B} }) } ] },
+  { name:'Old problem, solved', desc:'Knowledge gaps were heavy at the Baseline and in Week 1, then stopped. Representation errors started in Week 5. Advance the clock and watch whether the old problem stays on top.',
+    steps:[ { label:'Baseline + W1: 6 knowledge gaps', run:(st)=>({ ...st, week:1, misses:many(6,(_,i)=>mk(i<4?0:1,'AB','K',4,0,'Con',false)) }) },
+            { label:'W5: 3 representation errors', run:(st)=>({ ...st, week:5, misses:[...st.misses, ...many(3,()=>mk(5,'HT','R',4,1,'Con',true))] }) },
+            { label:'W6: 1 more representation error', run:(st)=>({ ...st, week:6, misses:[...st.misses, mk(6,'HT','R',4,1,'Con',true)] }) },
+            { label:'Rule B (no recency)', run:(st)=>({ ...st, opts:{...PRESETS.B} }) },
+            { label:'Rule C (recency half-life 2 weeks)', run:(st)=>({ ...st, opts:{...PRESETS.C} }) } ] },
+  { name:'Fix not working', desc:'A Logic error gets a Fix in Week 3, then happens again in Weeks 4 and 5. Meanwhile Perception errors without any Fix pile up. Should a Fix that keeps failing jump the queue?',
+    steps:[ { label:'W3: logic error, Fix written', run:(st)=>({ ...st, week:3, misses:[mk(3,'AB','L',2,0,'Con',true)] }) },
+            { label:'W3–4: 4 perception misses', run:(st)=>({ ...st, week:4, misses:[...st.misses, ...many(4,(_,i)=>mk(3+(i%2),'PD','P',2,1,'Car',false))] }) },
+            { label:'W4 + W5: logic error again', run:(st)=>({ ...st, week:5, misses:[...st.misses, mk(4,'AB','L',2,0,'Con',true), mk(5,'AB','L',2,0,'Con',true)] }) },
+            { label:'Fix boost off', run:(st)=>({ ...st, opts:{...st.opts, fixBoost:1} }) },
+            { label:'Fix boost ×1.5', run:(st)=>({ ...st, opts:{...st.opts, fixBoost:1.5} }) },
+            { label:'Fix boost ×2', run:(st)=>({ ...st, opts:{...st.opts, fixBoost:2} }) } ] },
+]
+
+/* ===== page shell ===== */
+let state = { misses:[...REAL], week:1, opts:{...PRESETS.B} }
+let lastTop = null, tab = 0, step = 0
+const $ = (id) => document.getElementById(id)
+
+function knobs() {
+  const o = state.opts
+  const sel = (k, pairs) => `<select data-k="${k}">${pairs.map(([v,l])=>`<option value="${v}" ${String(o[k])===String(v)?'selected':''}>${l}</option>`).join('')}</select>`
+  $('knobs').innerHTML = [
+    ['Group misses by', sel('unit',[['code','Error code'],['skill','Skill'],['skillCode','Skill × Error code']])],
+    ['Each miss counts as', sel('loss',[['count','1 (a count)'],['points','points lost'],['share','share of the Item lost (0–1)']])],
+    ['Conceptual errors decided by', sel('conceptualBy',[['none','ignored'],['code','the Error code (H, A, R, L)'],['flag','my Con/Car flag']])],
+    ['Conceptual weight', sel('conceptualWeight',[[1,'×1'],[1.5,'×1.5'],[2,'×2']])],
+    ['Recency half-life', sel('halfLife',[[0,'off'],[1,'1 week'],[2,'2 weeks'],[4,'4 weeks']])],
+    ['"Fix not working" boost', sel('fixBoost',[[1,'off'],[1.5,'×1.5'],[2,'×2']])],
+    ['Minimum misses before a Focus is shown', sel('minMisses',[[1,'1'],[2,'2'],[3,'3'],[5,'5']])],
+  ].map(([l,s])=>`<div class="opt"><label>${l}</label>${s}</div>`).join('')
+  $('knobs').querySelectorAll('select').forEach((s)=>s.onchange=()=>{ const v=s.value; dispatch((st)=>({ ...st, opts:{...st.opts, [s.dataset.k]: isNaN(+v)?v:+v} })) })
+}
+
+function label(key) {
+  return key.split(' × ').map((k)=>CODE_NAMES[k] && !SKILL_NAMES[k] ? `${k} ${CODE_NAMES[k]}` : SKILL_NAMES[k] ? `${k} (${SKILL_NAMES[k]})` : k).join(' × ')
+}
+
+function render() {
+  knobs()
+  for (const b of document.querySelectorAll('[data-preset]')) {
+    const p = PRESETS[b.dataset.preset]
+    b.classList.toggle('on', Object.keys(p).every((k)=>p[k]===state.opts[k]))
+  }
+  const ranked = rankFocus(state.misses, state.opts, state.week)
+  const max = Math.max(...ranked.map((r)=>r.score), 0.0001)
+  const top = ranked.find((r)=>!r.provisional)?.key ?? null
+  $('changed').textContent = lastTop !== null && top !== lastTop ? `Top Focus changed: ${lastTop ? label(lastTop) : 'none'} → ${top ? label(top) : 'none'}` : ''
+  lastTop = top
+  $('focus').innerHTML = ranked.length ? ranked.map((r,i)=>`
+    <div class="focus ${r.provisional?'prov':''}">
+      <b>${r.provisional?'':`#${i+1} `}${label(r.key)}</b>
+      ${r.provisional?'<span class="chip">Provisional: too few misses</span>':''}
+      ${r.fixNotWorking?'<span class="chip warn">Fix not working</span>':''}
+      <div class="small muted">${r.misses} miss${r.misses>1?'es':''} · ${r.pointsLost} points lost · weeks ${r.weeks.map((w)=>w===0?'Baseline':w).join(', ')} · score ${r.score.toFixed(2)}</div>
+      <div class="small muted">e.g. ${r.examples.join(', ')}</div>
+      <div class="bar" style="width:${(r.score/max)*100}%"></div>
+    </div>`).join('') : '<p class="muted">No misses: nothing to focus on.</p>'
+  $('n').textContent = state.misses.length
+  $('wk').textContent = state.week
+  $('log').innerHTML = '<tr><th>Item</th><th>Wk</th><th>Skill</th><th>Code</th><th>Pts</th><th>Con/Car</th><th>Fix</th></tr>' +
+    state.misses.map((m)=>`<tr><td>${m.id}</td><td>${m.week===0?'B':m.week}</td><td>${m.skill}</td><td>${m.code}</td><td>${m.score}/${m.points}</td><td>${m.nature??''}</td><td>${m.fix?'✓':''}</td></tr>`).join('')
+  renderScenario()
+}
+
+function dispatch(fn) { state = fn(state); render() }
+
+function renderScenario() {
+  $('tabs').innerHTML = SCENARIOS.map((s,i)=>`<button class="${i===tab?'on':''}" data-tab="${i}">${s.name}</button>`).join('')
+  $('tabs').querySelectorAll('button').forEach((b)=>b.onclick=()=>startScenario(+b.dataset.tab))
+  const s = SCENARIOS[tab]
+  $('scenario').innerHTML = `<p>${s.desc}</p><div class="row">${s.steps.map((st,i)=>`<button data-step="${i}" ${i!==step?'disabled':''} class="${i===step?'primary':''}">${i+1}. ${st.label}</button>`).join('')}</div>
+    ${step>=s.steps.length?'<p class="small muted">Walkthrough done. Click the tab again to replay it.</p>':''}`
+  $('scenario').querySelectorAll('[data-step]').forEach((b)=>b.onclick=()=>{ const st=s.steps[+b.dataset.step]; step++; dispatch(st.run) })
+}
+
+function startScenario(i) {
+  tab = i; step = 0; lastTop = null
+  state = { misses: [], week: 0, opts: { ...state.opts } }
+  render()
+}
+
+document.querySelectorAll('[data-preset]').forEach((b)=>b.onclick=()=>dispatch((st)=>({ ...st, opts:{...PRESETS[b.dataset.preset]} })))
+$('f-code').innerHTML = Object.keys(CODE_NAMES).map((c)=>`<option>${c}</option>`).join('')
+$('f-skill').innerHTML = Object.keys(SKILL_NAMES).map((c)=>`<option>${c}</option>`).join('')
+$('add').onclick = () => dispatch((st)=>{ const pts=+$('f-pts').value; return { ...st, misses:[...st.misses, mk(+$('f-week').value, $('f-skill').value, $('f-code').value, pts, Math.min(+$('f-score').value, pts-1), $('f-nat').value||null, $('f-fix').checked)] } })
+$('next').onclick = () => dispatch((st)=>({ ...st, week: Math.min(13, st.week+1) }))
+$('clear').onclick = () => dispatch((st)=>({ ...st, misses:[] }))
+render()
+</script>
+</body>
+</html>
