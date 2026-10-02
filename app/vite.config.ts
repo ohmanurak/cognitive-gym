@@ -1,6 +1,7 @@
 import type { IncomingMessage } from 'node:http'
 import react from '@vitejs/plugin-react'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
+import { capFromEnv, createCoachClient, createSpendStore, handleCoach } from './server/coach.ts'
 import { readProgress, resolveSaveDir, writeProgress } from './server/saveFile.ts'
 
 const readBody = (req: IncomingMessage) =>
@@ -51,7 +52,50 @@ function progressFile(): Plugin {
   }
 }
 
+/**
+ * Coach me: GET /api/coach/health, POST /api/coach/diagnose. Only active under `npm run dev`.
+ * The key is read server-side from ANTHROPIC_API_KEY (app/.env.local) and never reaches the bundle.
+ */
+function coachApi(): Plugin {
+  let env: Record<string, string> = {}
+  return {
+    name: 'cogym-coach',
+    apply: 'serve',
+    configResolved(config) {
+      env = loadEnv(config.mode, config.envDir || config.root, '')
+    },
+    configureServer(server) {
+      const apiKey = env.ANTHROPIC_API_KEY
+      const deps = {
+        client: apiKey ? createCoachClient(apiKey) : null,
+        spend: createSpendStore(resolveSaveDir()),
+        now: () => new Date(),
+        capUsd: capFromEnv(env),
+        log: (line: string) => server.config.logger.info(line),
+      }
+      server.middlewares.use('/api/coach', async (req, res) => {
+        const send = (code: number, obj: unknown) => {
+          res.statusCode = code
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(obj))
+        }
+        let body: unknown
+        if (req.method === 'POST') {
+          try {
+            body = JSON.parse(await readBody(req))
+          } catch {
+            return send(400, { error: 'Invalid JSON' })
+          }
+        }
+        const path = new URL(req.url ?? '', 'http://x').pathname
+        const r = await handleCoach({ method: req.method ?? 'GET', path, body }, deps)
+        send(r.status, r.body)
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), progressFile()],
+  plugins: [react(), progressFile(), coachApi()],
 })

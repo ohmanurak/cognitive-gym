@@ -10,6 +10,7 @@
  *   Incoming uncommitted Blocks are ignored.
  * - Span tests: union by id (local wins a clash). Old `spans`: union by timestamp.
  * - Reflections: union by key; on a clash the non-empty local text wins (no timestamps to compare).
+ * - Coaching notes: union by key; on a clash the newer `createdAt` wins. Missing on either side = `{}`.
  * - Orphans (Items not in any known Block, Blocks unknown to the workbook): never dropped.
  *   Unknown Blocks merge by the same rules; orphan Item attempts are unioned by Item id, local wins.
  * - Error-code/Fix fields live on the Attempt, so they travel with it.
@@ -102,7 +103,10 @@ export function applyMerge(local: State, incoming: State, plan: MergePlan): Stat
   spans.sort((a, b) => a.at - b.at)
   const reflections = { ...local.reflections }
   for (const [k, v] of Object.entries(incoming.reflections ?? {})) if (!reflections[k]) reflections[k] = v
-  return { ...local, attempts, blocks, spanTests, spans, reflections }
+  const coachingNotes = { ...local.coachingNotes }
+  for (const [k, n] of Object.entries(incoming.coachingNotes ?? {}))
+    if (!coachingNotes[k] || Date.parse(n.createdAt) > Date.parse(coachingNotes[k].createdAt)) coachingNotes[k] = n
+  return { ...local, attempts, blocks, spanTests, spans, reflections, coachingNotes }
 }
 
 /** Blocks whose incoming version will be applied, for the preview label list. */
