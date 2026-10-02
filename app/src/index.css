@@ -101,3 +101,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Read-only tab: a disabled fieldset disables every control inside without adding chrome. */
 .ro-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.focus-card { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.focus-card .bar { margin-top: 6px; }
+.pill.warn { color: var(--warn); border-color: var(--warn); }
