@@ -4,6 +4,7 @@ import { requestDiagnosis, useCoach } from '../lib/coachClient'
 import type { Focus } from '../lib/focus'
 import type { CoachingNote } from '../lib/state'
 import { actions, getState, useStore } from '../lib/store'
+import { StudyLinks } from './StudyLinks'
 
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 
@@ -47,12 +48,13 @@ export function CoachPanel({ focus }: { focus: Focus }) {
           {error}
         </div>
       )}
-      {note && <CoachingNoteView note={note} />}
+      {note && <CoachingNoteView note={note} noteKey={key} />}
     </div>
   )
 }
 
-function CoachingNoteView({ note }: { note: CoachingNote }) {
+/** `noteKey` (optional) enables Find study links inside the note. */
+function CoachingNoteView({ note, noteKey }: { note: CoachingNote; noteKey?: string }) {
   const { diagnosis, strategies, practice } = note.sections
   const [first] = diagnosis.split('\n')
   return (
@@ -74,6 +76,7 @@ function CoachingNoteView({ note }: { note: CoachingNote }) {
           <li key={i}>{s}</li>
         ))}
       </ul>
+      {noteKey && <StudyLinks noteKey={noteKey} note={note} />}
       <div className="small muted">Cost ${note.usage.costUsd.toFixed(3)}</div>
     </details>
   )

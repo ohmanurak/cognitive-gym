@@ -2,6 +2,7 @@ import type { IncomingMessage } from 'node:http'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import { capFromEnv, createCoachClient, createSpendStore, handleCoach } from './server/coach.ts'
+import { createLinkFetcher, handleLinks } from './server/links.ts'
 import { readProgress, resolveSaveDir, writeProgress } from './server/saveFile.ts'
 
 const readBody = (req: IncomingMessage) =>
@@ -53,7 +54,7 @@ function progressFile(): Plugin {
 }
 
 /**
- * Coach me: GET /api/coach/health, POST /api/coach/diagnose. Only active under `npm run dev`.
+ * Coach me: GET /api/coach/health, POST /api/coach/diagnose, POST /api/coach/links. Only active under `npm run dev`.
  * The key is read server-side from ANTHROPIC_API_KEY (app/.env.local) and never reaches the bundle.
  */
 function coachApi(): Plugin {
@@ -73,6 +74,7 @@ function coachApi(): Plugin {
         capUsd: capFromEnv(env),
         log: (line: string) => server.config.logger.info(line),
       }
+      const fetcher = createLinkFetcher()
       server.middlewares.use('/api/coach', async (req, res) => {
         const send = (code: number, obj: unknown) => {
           res.statusCode = code
@@ -88,7 +90,8 @@ function coachApi(): Plugin {
           }
         }
         const path = new URL(req.url ?? '', 'http://x').pathname
-        const r = await handleCoach({ method: req.method ?? 'GET', path, body }, deps)
+        const coachReq = { method: req.method ?? 'GET', path, body }
+        const r = path === '/links' ? await handleLinks(coachReq, { ...deps, fetcher }) : await handleCoach(coachReq, deps)
         send(r.status, r.body)
       })
     },
