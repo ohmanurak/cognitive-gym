@@ -1,5 +1,5 @@
 import { scopeBlocks, scopeStats, scoredFirstAttempts, type Scope } from './metrics'
-import { blockState, type ErrorCode, type State } from './store'
+import { blockState, type ErrorCode, type State } from './state'
 import { itemById } from './structure'
 
 /** Conceptual errors per the Workbook interpretation table; every other code is careless. */
