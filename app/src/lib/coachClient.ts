@@ -3,7 +3,7 @@
  * Coach panel on the page. Thin wrapper over fetch; the payload is built in `coach.ts`.
  */
 import { useSyncExternalStore } from 'react'
-import type { CoachPayload } from './coach'
+import type { CoachPayload, MissPayload } from './coach'
 import type { CoachingNote } from './state'
 
 export interface CoachHealth {
@@ -60,13 +60,16 @@ export function resetCoachClient() {
 
 export type DiagnoseResult = { note: CoachingNote } | { error: string }
 
-/** POST /api/coach/diagnose. Refuses (null) when the same note is already running. */
-export async function requestDiagnosis(key: string, payload: CoachPayload): Promise<DiagnoseResult | null> {
+/**
+ * POST /api/coach/diagnose (or /diagnose-miss for a `miss:` key). Refuses (null) when the
+ * same note is already running.
+ */
+export async function requestDiagnosis(key: string, payload: CoachPayload | MissPayload): Promise<DiagnoseResult | null> {
   if (snap.running.has(key)) return null
   set({ running: new Set([...snap.running, key]) })
   const { basedOn, ...forClaude } = payload
   try {
-    const r = await fetch('/api/coach/diagnose', {
+    const r = await fetch(key.startsWith('miss:') ? '/api/coach/diagnose-miss' : '/api/coach/diagnose', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, payload: forClaude, basedOn }),

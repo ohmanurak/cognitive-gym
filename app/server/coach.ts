@@ -62,6 +62,16 @@ export const SYSTEM_PROMPT = [
   'searchTopic: a short web search query for free study material on the underlying concept.',
 ].join('\n\n')
 
+/** Per-miss variant (#44): one miss, where the Answer left the Key's derivation, 1 strategy, short practice. */
+export const MISS_SYSTEM_PROMPT = [
+  "You coach a learner working through a 12-week reasoning workbook. You get one miss: the Item text, their Answer, the Key (answer, derivation, trap), Skill, conceptual (Con) or careless (Car), their failed assumption and their Fix, plus its Error code and the code's workbook definition when it has one.",
+  'Write in second person, plain English. No praise, no hedging. The whole note must fit on one screen.',
+  "diagnosis: walk through where their Answer diverged from the Key's derivation, step by step, and say whether they fell into the Key's trap. At most 120 words.",
+  'strategies: exactly 1 concrete Fix sentence, a check or procedure they can run. Never "be careful", "double-check", "pay attention" or "try harder".',
+  'practice: 1 or 2 short items for this week. You may name this Item, or describe generic drills. Never name, invent or reveal any other workbook Item.',
+  'searchTopic: a short web search query for free study material on the underlying concept.',
+].join('\n\n')
+
 export const DEFAULT_MONTHLY_USD = 5
 
 /** Monthly cap from `COACH_MONTHLY_USD` (app/.env.local); default $5. */
@@ -133,7 +143,8 @@ export async function handleCoach(req: CoachRequest, deps: CoachDeps): Promise<C
   const m = month(deps.now())
   const remaining = () => Math.max(0, deps.capUsd - deps.spend.spent(m))
   if (req.method === 'GET' && req.path === '/health') return { status: 200, body: { ok: !!deps.client, remainingUsd: remaining(), capUsd: deps.capUsd } }
-  if (req.method !== 'POST' || req.path !== '/diagnose') return { status: 404, body: { error: 'Not found' } }
+  const perMiss = req.path === '/diagnose-miss'
+  if (req.method !== 'POST' || (req.path !== '/diagnose' && !perMiss)) return { status: 404, body: { error: 'Not found' } }
 
   const body = req.body as { payload?: unknown; basedOn?: unknown } | null
   if (!body || typeof body.payload !== 'object' || !Array.isArray(body.basedOn))
@@ -148,7 +159,7 @@ export async function handleCoach(req: CoachRequest, deps: CoachDeps): Promise<C
       model: COACH_MODEL,
       max_tokens: 3000,
       output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
-      system: SYSTEM_PROMPT,
+      system: perMiss ? MISS_SYSTEM_PROMPT : SYSTEM_PROMPT,
       messages: [{ role: 'user', content: JSON.stringify(body.payload, null, 1) }],
     })
   } catch (e) {

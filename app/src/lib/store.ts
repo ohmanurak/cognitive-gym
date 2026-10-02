@@ -118,6 +118,7 @@ export const actions = {
   setWeekAnswer: (week: number, index: number, text: string) => commit(core.setWeekAnswer(state, week, index, text)),
   setReflection: (id: string, text: string) => commit(core.setReflection(state, id, text)),
   setCoachingNote: (key: string, note: CoachingNote) => commit(core.setCoachingNote(state, key, note)),
+  adoptFix: (itemIds: string[], fix: string) => commit(core.adoptFix(state, itemIds, fix)),
 
   exportJson(): string {
     return JSON.stringify(
