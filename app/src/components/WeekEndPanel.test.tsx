@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { Attempt, ErrorCode } from '../lib/state'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetCoachClient } from '../lib/coachClient'
+import type { Attempt, CoachingNote, ErrorCode } from '../lib/state'
 import { actions, getState, useStore } from '../lib/store'
 import { blocks } from '../lib/structure'
 import { reflectionQuestions, weekEnd } from '../lib/weekend'
@@ -103,5 +104,116 @@ describe('week-end Top Focus card', () => {
     expect(weekEnd(getState(), W).complete).toBe(false)
     await userEvent.type(strategyField(), 'Draw the structure before answering')
     expect(weekEnd(getState(), W).complete).toBe(true)
+  })
+})
+
+const NOTE: CoachingNote = {
+  createdAt: '2026-10-02T10:00:00.000Z',
+  model: 'claude-sonnet-5-5',
+  basedOn: [],
+  sections: {
+    diagnosis: 'You jump to the answer before drawing the structure.',
+    strategies: ['Sketch the structure first.', 'Name the relation before solving.'],
+    practice: ['Redo two R misses.'],
+    searchTopic: 'problem representation',
+  },
+  links: [],
+  usage: { inputTokens: 1, outputTokens: 1, searches: 0, costUsd: 0.01 },
+}
+
+/** fetch stub: the /api/coach health answer. */
+function stubHealth(ok: boolean) {
+  const fetchMock = vi.fn(() =>
+    Promise.resolve(
+      new Response(JSON.stringify({ ok, remainingUsd: 5, capUsd: 5 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    ),
+  )
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+const topCard = () => within(screen.getByRole('region', { name: 'Top Focus' }))
+
+describe('week-end coaching', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    actions.reset()
+    resetCoachClient()
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('offers Coach me on the Top Focus card when the health check is ok', async () => {
+    stubHealth(true)
+    seed(times(4, ['R']))
+    render(<Panel />)
+    expect(await topCard().findByRole('button', { name: 'Coach me · ~$0.01' })).toBeInTheDocument()
+  })
+
+  it('hides Coach me when the health check is not ok', async () => {
+    const fetchMock = stubHealth(false)
+    seed(times(4, ['R']))
+    render(<Panel />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    await act(async () => {})
+    expect(screen.queryByRole('button', { name: /Coach me/ })).not.toBeInTheDocument()
+  })
+
+  it('shows the saved focus:<code> note inline on the card', async () => {
+    stubHealth(true)
+    seed(times(4, ['R']))
+    actions.setCoachingNote('focus:R', NOTE)
+    render(<Panel />)
+    expect(topCard().getByText(/· You jump to the answer before drawing the structure\./)).toBeInTheDocument()
+  })
+
+  it('no note for the top Focus: no Insert strategy, and the field stays empty', async () => {
+    stubHealth(true)
+    seed(times(4, ['R']))
+    actions.setCoachingNote('focus:K', NOTE)
+    render(<Panel />)
+    await topCard().findByRole('button', { name: 'Coach me · ~$0.01' })
+    expect(screen.queryByRole('button', { name: 'Insert strategy' })).not.toBeInTheDocument()
+    expect(strategyField()).toHaveValue('')
+  })
+
+  it('with a note: Insert strategy inserts the one chosen strategy, never automatically, and it stays editable', async () => {
+    stubHealth(true)
+    seed(times(4, ['R']))
+    actions.setCoachingNote('focus:R', NOTE)
+    render(<Panel />)
+    expect(strategyField()).toHaveValue('')
+    await userEvent.click(screen.getByRole('button', { name: 'Insert strategy' }))
+    expect(strategyField()).toHaveValue('')
+    await userEvent.click(screen.getByRole('button', { name: 'Name the relation before solving.' }))
+    expect(strategyField()).toHaveValue('Name the relation before solving.')
+    expect(screen.queryByRole('button', { name: 'Sketch the structure first.' })).not.toBeInTheDocument()
+    await userEvent.type(strategyField(), ' Every R item.')
+    expect(strategyField()).toHaveValue('Name the relation before solving. Every R item.')
+    expect(weekEnd(getState(), W).complete).toBe(true)
+  })
+
+  it('Insert strategy keeps what the learner already wrote', async () => {
+    stubHealth(true)
+    seed(times(4, ['R']))
+    actions.setCoachingNote('focus:R', NOTE)
+    render(<Panel />)
+    await userEvent.type(strategyField(), 'Slow down.')
+    await userEvent.click(screen.getByRole('button', { name: 'Insert strategy' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Sketch the structure first.' }))
+    expect(strategyField()).toHaveValue('Slow down.\nSketch the structure first.')
+  })
+
+  it('a note does not change the completion rule: incomplete until the strategy is filled in', () => {
+    stubHealth(false)
+    seed(times(4, ['R']))
+    actions.setCoachingNote('focus:R', NOTE)
+    render(<Panel />)
+    expect(weekEnd(getState(), W).complete).toBe(false)
   })
 })

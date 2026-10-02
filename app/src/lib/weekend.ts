@@ -127,3 +127,9 @@ export function weekEndFocus(s: State, week: number): WeekEndFocus {
       : null
   return { focus: focus[0] ?? null, callout }
 }
+
+/** The strategy answer with one Coaching-note strategy added on its own line after what is already written. */
+export function insertStrategy(text: string, strategy: string): string {
+  const kept = text.trimEnd()
+  return kept ? `${kept}\n${strategy}` : strategy
+}

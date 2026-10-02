@@ -3,7 +3,7 @@ import { dayBlocks } from './erroranalysis'
 import { progressOf } from './metrics'
 import { emptyState, setWeekAnswer, type Attempt, type ErrorCode, type State } from './state'
 import { blocks, workbook } from './structure'
-import { daysTrained, reflectionQuestions, restDay, weekComplete, weekEnd, weekEndFocus } from './weekend'
+import { daysTrained, insertStrategy, reflectionQuestions, restDay, weekComplete, weekEnd, weekEndFocus } from './weekend'
 
 const W = 1
 
@@ -133,5 +133,16 @@ describe('week-end Top Focus', () => {
   it('nothing ranks: no Top Focus and no call-out', () => {
     const s = miss(emptyState(), 1, 2, 'K')
     expect(weekEndFocus(s, 1)).toEqual({ focus: null, callout: null })
+  })
+})
+
+describe('insertStrategy', () => {
+  it('fills an empty answer with the strategy', () => {
+    expect(insertStrategy('', 'Sketch the structure first.')).toBe('Sketch the structure first.')
+    expect(insertStrategy('  \n', 'Sketch the structure first.')).toBe('Sketch the structure first.')
+  })
+
+  it('adds the strategy on a new line after what is already written', () => {
+    expect(insertStrategy('Slow down.\n', 'Sketch the structure first.')).toBe('Slow down.\nSketch the structure first.')
   })
 })

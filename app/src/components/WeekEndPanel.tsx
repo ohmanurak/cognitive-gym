@@ -1,8 +1,9 @@
-import { Fragment, useId } from 'react'
+import { Fragment, useId, useState } from 'react'
 import { firstOpenMissBlock } from '../lib/erroranalysis'
 import { ERROR_CODES, actions, type State } from '../lib/store'
 import {
   daysTrained,
+  insertStrategy,
   reflectionAnswers,
   reflectionQuestions,
   restDay,
@@ -10,6 +11,7 @@ import {
   weekEndFocus,
   weekScorecard,
 } from '../lib/weekend'
+import { CoachPanel } from './CoachPanel'
 import { FocusCard } from './FocusCard'
 
 const pct = (n: number | null) => (n == null ? '-' : `${n.toFixed(0)}%`)
@@ -75,6 +77,7 @@ export function WeekEndPanel({ s, week }: { s: State; week: number }) {
   const top = weekEndFocus(s, week)
   const promptId = useId()
   const strategy = qs.length - 1
+  const note = top.focus ? s.coachingNotes?.[`focus:${top.focus.code}`] : undefined
   return (
     <div>
       <h2>Week-end</h2>
@@ -103,7 +106,9 @@ export function WeekEndPanel({ s, week }: { s: State; week: number }) {
       {top.focus && (
         <section aria-label="Top Focus">
           <h3>Top Focus</h3>
-          <FocusCard focus={top.focus} max={top.focus.score} />
+          <FocusCard focus={top.focus} max={top.focus.score}>
+            <CoachPanel focus={top.focus} />
+          </FocusCard>
           <a className="small" href="#/errors">
             see all on Error log
           </a>
@@ -135,11 +140,49 @@ export function WeekEndPanel({ s, week }: { s: State; week: number }) {
                     : 'What will you change next week?'}
                 </div>
               )}
+              {i === strategy && note && note.sections.strategies.length > 0 && (
+                <InsertStrategy
+                  strategies={note.sections.strategies}
+                  onPick={(st) => actions.setWeekAnswer(week, i, insertStrategy(answers[i], st))}
+                />
+              )}
             </Fragment>
           ))}
           {!we.reflection && <p className="small">Week-end is complete once the last (strategy) answer is filled in.</p>}
         </>
       )}
+    </div>
+  )
+}
+
+/** "Insert strategy": the learner picks one strategy from the Coaching note; nothing is inserted until they do. */
+function InsertStrategy({ strategies, onPick }: { strategies: string[]; onPick: (strategy: string) => void }) {
+  const [open, setOpen] = useState(false)
+  if (!open)
+    return (
+      <div className="row" style={{ marginTop: 4 }}>
+        <button type="button" onClick={() => setOpen(true)}>
+          Insert strategy
+        </button>
+      </div>
+    )
+  return (
+    <div className="row" role="group" aria-label="Pick one strategy to insert" style={{ marginTop: 4 }}>
+      {strategies.map((st, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => {
+            onPick(st)
+            setOpen(false)
+          }}
+        >
+          {st}
+        </button>
+      ))}
+      <button type="button" className="muted" onClick={() => setOpen(false)}>
+        Cancel
+      </button>
     </div>
   )
 }
